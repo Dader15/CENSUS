@@ -1,0 +1,22 @@
+.table-relative {
+    position: relative;
+    overflow: auto;
+  }
+  
+  .table thead th {
+    position: sticky;
+    top: -1.5px;
+    background-color: #4caf50;
+    color: white;
+    z-index: 1;
+  }
+  
+.table-container {
+    display: inline-block;
+    overflow-y: scroll;
+    max-height: 70vh;
+  }
+  
+  .table-overflow {
+    margin: auto;
+  }

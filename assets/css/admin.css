@@ -1,0 +1,74 @@
+body {
+    /* background-color: #f8f9fa; */
+    background: linear-gradient(to right, #2d6e30, #ff9900); /* Updated gradient background */
+    padding: 0;
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.unread-row {
+    background-color: #ffeeba; /* Change to the desired color for unread messages */
+}
+.btn {
+    border-radius: 0 !important;
+}
+.container {
+    background-color: #ffffff;
+    padding: 24px;
+    box-shadow: 0 0 16px rgba(0, 0, 0, 0.12);
+    width: calc(100vw - 32px);
+    max-width: 100vw;
+    min-width: 320px;
+    margin: 16px auto;
+    border-radius: 16px;
+    min-height: calc(100vh - 32px);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+.nav-tabs {
+    border-bottom: 2px solid #1B5E20;
+    margin-bottom: 20px;
+}
+.nav-link {
+    color: #1B5E20;
+    font-weight: bold;
+    animation-duration: 0.5s;
+    transition: color 0.3s ease-in-out;
+}
+.nav-link:hover {
+    color: #FF6D00; 
+    transform: scale(1.1);
+}
+.nav-link.active {
+    background-color: #007bff;
+    color: #ffffff;
+    border-radius: 5px;
+}
+.nav-link i {
+    transition: transform 0.5s ease-in-out;
+}
+.nav-link:hover i {
+    transform: rotate(360deg);
+}
+.tab-content {
+    margin-top: 20px;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+#attachment img {
+    max-width: none;
+    /* Override any max-width property */
+    width: 100%;
+    /* Ensure the image fills its container */
+}
+/* .footer {
+    background-color: #343a40; 
+    color: #fff; 
+    padding: 20px 0; 
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+} */
