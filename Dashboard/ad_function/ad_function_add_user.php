@@ -2,6 +2,32 @@
 session_start();
 include_once '../../connection/config.php';
 
+// Function to generate secure password
+function generateSecurePassword() {
+    $uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    $numbers = '0123456789';
+    $symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    // Ensure at least one character from each required set
+    $password = '';
+    $password .= $uppercase[rand(0, strlen($uppercase) - 1)];
+    $password .= $lowercase[rand(0, strlen($lowercase) - 1)];
+    $password .= $numbers[rand(0, strlen($numbers) - 1)];
+    $password .= $symbols[rand(0, strlen($symbols) - 1)];
+    
+    // Fill remaining 8 characters from all sets combined
+    $all_chars = $uppercase . $lowercase . $numbers . $symbols;
+    for ($i = 0; $i < 8; $i++) {
+        $password .= $all_chars[rand(0, strlen($all_chars) - 1)];
+    }
+    
+    // Shuffle the password
+    $password_array = str_split($password);
+    shuffle($password_array);
+    return implode('', $password_array);
+}
+
 $response = [
     'status' => 400,
     'message' => 'Invalid request',
@@ -9,62 +35,57 @@ $response = [
 ];
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $full_name = isset($_POST["full_name"]) ? mysqli_real_escape_string($con, strtoupper(trim($_POST["full_name"]))) : '';
+    $sname = isset($_POST["sname"]) ? mysqli_real_escape_string($con, strtoupper(trim($_POST["sname"]))) : '';
+    $fname = isset($_POST["fname"]) ? mysqli_real_escape_string($con, strtoupper(trim($_POST["fname"]))) : '';
+    $middleinitial = isset($_POST["middleinitial"]) ? mysqli_real_escape_string($con, strtoupper(trim($_POST["middleinitial"]))) : '';
+    $suffix = isset($_POST["suffix"]) ? mysqli_real_escape_string($con, strtoupper(trim($_POST["suffix"]))) : '';
     $username = isset($_POST["username"]) ? mysqli_real_escape_string($con, strtolower(trim($_POST["username"]))) : '';
-    $password = isset($_POST["password"]) ? trim($_POST["password"]) : '';
     $usertype = isset($_POST["usertype"]) ? mysqli_real_escape_string($con, trim($_POST["usertype"])) : '';
     $brgy = isset($_POST["brgy"]) ? mysqli_real_escape_string($con, trim($_POST["brgy"])) : '';
     $position = isset($_POST["position"]) ? mysqli_real_escape_string($con, trim($_POST["position"])) : '';
 
-    if (empty($full_name) || empty($username) || empty($password) || empty($usertype)) {
+    if (empty($sname) || empty($fname) || empty($username) || empty($usertype)) {
         $response['message'] = 'Missing required fields';
     } else {
-        // Password strength validation
-        if (strlen($password) < 12) {
-            $response['message'] = 'Password must be at least 12 characters long';
-        } elseif (!preg_match('/[A-Z]/', $password)) {
-            $response['message'] = 'Password must contain at least 1 uppercase letter';
-        } elseif (!preg_match('/[a-z]/', $password)) {
-            $response['message'] = 'Password must contain at least 1 lowercase letter';
-        } elseif (!preg_match('/[0-9]/', $password)) {
-            $response['message'] = 'Password must contain at least 1 number';
-        } elseif (!preg_match('/[!@#$%^&*()_+\-=\[\]{};:\'",.<>?\/\\|`~]/', $password)) {
-            $response['message'] = 'Password must contain at least 1 symbol (!@#$%^&*() etc)';
+        // Check if username exists
+        $check_stmt = $con->prepare("SELECT id FROM user_tbl WHERE LOWER(username) = ?");
+        if (!$check_stmt) {
+            $response['message'] = 'Prepare failed: ' . $con->error;
         } else {
-            // Check if username exists
-            $check_stmt = $con->prepare("SELECT id FROM user_tbl WHERE LOWER(username) = ?");
-            if (!$check_stmt) {
-                $response['message'] = 'Prepare failed: ' . $con->error;
-            } else {
-                $lower_username = strtolower($username);
-                $check_stmt->bind_param("s", $lower_username);
-                $check_stmt->execute();
-                $check_result = $check_stmt->get_result();
+            $lower_username = strtolower($username);
+            $check_stmt->bind_param("s", $lower_username);
+            $check_stmt->execute();
+            $check_result = $check_stmt->get_result();
 
-                if ($check_result->num_rows > 0) {
-                    $response['message'] = 'Username already exists';
+            if ($check_result->num_rows > 0) {
+                $response['message'] = 'Username already exists';
+            } else {
+                // Generate random password
+                $generated_password = generateSecurePassword();
+                $hashed_password = password_hash($generated_password, PASSWORD_BCRYPT);
+                
+                $insert_stmt = $con->prepare("INSERT INTO user_tbl (sname, fname, middleinitial, suffix, username, password, usertype, brgy, position, delete_status, `date created`, changedpassword) 
+                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW(), 0)");
+                
+                if (!$insert_stmt) {
+                    $response['message'] = 'Prepare failed: ' . $con->error;
                 } else {
-                    $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-                    $insert_stmt = $con->prepare("INSERT INTO user_tbl (full_name, username, password, usertype, brgy, position, delete_status, `date created`, changedpassword) 
-                                 VALUES (?, ?, ?, ?, ?, ?, 0, NOW(), 1)");
+                    $insert_stmt->bind_param("sssssssss", $sname, $fname, $middleinitial, $suffix, $username, $hashed_password, $usertype, $brgy, $position);
                     
-                    if (!$insert_stmt) {
-                        $response['message'] = 'Prepare failed: ' . $con->error;
+                    if ($insert_stmt->execute()) {
+                        $response['status'] = 200;
+                        $response['message'] = 'User added successfully';
+                        $response['data'] = [
+                            'id' => $insert_stmt->insert_id,
+                            'generated_password' => $generated_password
+                        ];
                     } else {
-                        $insert_stmt->bind_param("ssssss", $full_name, $username, $hashed_password, $usertype, $brgy, $position);
-                        
-                        if ($insert_stmt->execute()) {
-                            $response['status'] = 200;
-                            $response['message'] = 'User added successfully';
-                            $response['data'] = ['id' => $insert_stmt->insert_id];
-                        } else {
-                            $response['message'] = 'Error adding user: ' . $insert_stmt->error;
-                        }
-                        $insert_stmt->close();
+                        $response['message'] = 'Error adding user: ' . $insert_stmt->error;
                     }
+                    $insert_stmt->close();
                 }
-                $check_stmt->close();
             }
+            $check_stmt->close();
         }
     }
 } else {

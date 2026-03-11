@@ -6,12 +6,6 @@ if (!isset($_SESSION['UID'])) {
     header("Location: ../index.php");
     exit;
 }
-
-// Check if user needs to change password
-// if ($_SESSION['changedpassword'] == 0) {
-//     header("Location: ../change_password.php");
-//     exit;
-// }
 ?>
 
 <!DOCTYPE html>
@@ -115,7 +109,7 @@ if (!isset($_SESSION['UID'])) {
 
                 <!-- Form Container (Hidden by default) -->
                 <div id="censusFormContainer" style="display: none;">
-                    <!-- Form will be loaded here -->
+                    <!-- Census Form will be loaded here -->
                 </div>
 
                 <!-- Stats and Table Container -->
@@ -285,8 +279,12 @@ if (!isset($_SESSION['UID'])) {
     </div>
 
     <!-- Include Modals -->
+    <?php include 'index_modal/index_modal_census_form.php'; ?>
     <?php include 'index_modal/index_modal_user.php'; ?>
     <?php include 'index_modal/index_modal_edit_profile.php'; ?>
+    <?php include 'index_modal/index_modal_changepass.php'; ?>
+    <?php include 'index_modal/index_modal_change_user_password.php'; ?>
+    <?php include 'index_modal/index_modal_initial_password_change.php'; ?>
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -294,10 +292,58 @@ if (!isset($_SESSION['UID'])) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="../assets/js/ajax/ajax_login_logout.js"></script>
     <script src="../assets/js/functions.js"></script>
-    <script src="../assets/js/form_builder.js"></script>
+    <script src="../assets/js/form_builder.js?v=1.0.1"></script>
     <script>
         // Set current user ID for client-side filtering
         window.currentUID = <?php echo isset($_SESSION['UID']) ? intval($_SESSION['UID']) : '0'; ?>;
+        window.currentUserName = "<?php echo isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name']) : 'User'; ?>";
+        window.changedPassword = <?php echo isset($_SESSION['changedpassword']) ? intval($_SESSION['changedpassword']) : '1'; ?>;
+        
+        // Set encoder name for form
+        document.body.dataset.encoderName = "<?php echo isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name']) : 'User'; ?>";
+        
+        $(document).ready(function() {
+            // Show initial password change modal if user needs to change password
+            if (window.changedPassword == 0) {
+                let initialPasswordModal = new bootstrap.Modal(document.getElementById('initialPasswordChangeModal'));
+                initialPasswordModal.show();
+            }
+            
+            // Create New Entry button handler
+            $('#createNewBtn').on('click', function() {
+                // Load form content into container
+                const modalContent = document.getElementById('censusFormModal');
+                if (modalContent) {
+                    const formHTML = modalContent.innerHTML;
+                    $('#censusFormContainer').html(formHTML);
+                }
+                
+                // Show census form
+                showCensusForm();
+                // Disable button during form entry
+                $(this).prop('disabled', true).css('opacity', '0.6');
+            });
+        });
+        
+        function showCensusForm() {
+            // Show the form container
+            $('#mainContentContainer').fadeOut(300, function() {
+                $('#censusFormContainer').fadeIn(300);
+            });
+            
+            // Reset and reinitialize the form
+            window.censusFormBuilder = new CensusFormBuilder();
+        }
+        
+        function hideCensusForm() {
+            // Hide the form container
+            $('#censusFormContainer').fadeOut(300, function() {
+                $('#mainContentContainer').fadeIn(300);
+            });
+            
+            // Re-enable create button
+            $('#createNewBtn').prop('disabled', false).css('opacity', '1');
+        }
     </script>
     <!-- <script src="census_ui.js"></script> -->
 </body>

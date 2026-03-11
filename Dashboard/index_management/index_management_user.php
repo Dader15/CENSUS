@@ -30,7 +30,7 @@
                 <table class="modern-table" id="usersTable">
                     <thead>
                         <tr>
-                            <th>Full Name</th>
+                            <th>Name</th>
                             <th>Username</th>
                             <th>Type</th>
                             <th>Barangay</th>

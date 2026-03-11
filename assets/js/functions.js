@@ -46,40 +46,36 @@ $(document).ready(function() {
 
     // Edit Profile
     $(document).on('click', '.user-avatar:has(i.fa-user)', function() {
-        if (currentPage === 'user-management') {
-            let fullName = $('p', '.user-details').text();
-            let position = $('small', '.user-details').text();
-            $('#profileFullName').val(fullName);
-            $('#profilePosition').val(position);
-            let profileModal = new bootstrap.Modal(document.getElementById('profileModal'));
-            profileModal.show();
-        } else {
-            // Get current user data from session
-            $.ajax({
-                url: '../Dashboard/ad_function/ad_function_get_current_user.php',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.status === 200 && response.data) {
-                        let user = response.data;
-                        // Populate display fields
-                        $('#displayUsername').text(user.username || '-');
-                        $('#displayBarangay').text(user.brgy || '-');
-                        $('#profileFullName').val(user.full_name);
-                        $('#profileUsername').val(user.username);
-                        $('#profileBarangay').val(user.brgy || '');
-                        $('#profilePosition').val(user.position || '');
-                        $('#profilePassword').val('');
-                        $('#profileConfirmPassword').val('');
-                    }
-                    let profileModal = new bootstrap.Modal(document.getElementById('profileModal'));
-                    profileModal.show();
-                },
-                error: function() {
+        // Always fetch current user data from server
+        $.ajax({
+            url: '../Dashboard/ad_function/ad_function_get_current_user.php',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 200 && response.data) {
+                    let user = response.data;
+                    // Populate all profile fields
+                    $('#profileSname').val(user.sname || '');
+                    $('#profileFname').val(user.fname || '');
+                    $('#profileMI').val(user.middleinitial || '');
+                    $('#profileSuffix').val(user.suffix || '');
+                    $('#profileUsername').val(user.username || '');
+                    // Handle brgy stored as "Barangay X" or just "X"
+                    let brgyVal = String(user.brgy || '');
+                    let brgyMatch = brgyVal.match(/\d+/);
+                    $('#profileBarangay').val(brgyMatch ? brgyMatch[0] : brgyVal);
+                    $('#profilePosition').val(user.position || '');
+                } else {
                     Swal.fire('Error', 'Could not load profile data', 'error');
+                    return;
                 }
-            });
-        }
+                let profileModal = new bootstrap.Modal(document.getElementById('profileModal'));
+                profileModal.show();
+            },
+            error: function() {
+                Swal.fire('Error', 'Could not load profile data', 'error');
+            }
+        });
     });
 
     // Load User Management
@@ -106,8 +102,6 @@ $(document).ready(function() {
                 resetUserForm();
                 $('#userModalLabel').html('<i class="fas fa-user-plus"></i> Add New User');
                 $('#deleteStatus').val('0').show();
-                $('#password').prop('required', true).prop('placeholder', 'Min. 12 chars: 1 uppercase, 1 lowercase, 1 number, 1 symbol');
-                $('#confirmPassword').prop('required', true).prop('placeholder', 'Min. 12 chars: 1 uppercase, 1 lowercase, 1 number, 1 symbol');
                 $('#username').prop('disabled', false);
                 $('#saveUserBtn').text('Add User');
                 let userModal = new bootstrap.Modal(document.getElementById('userModal'));
@@ -159,13 +153,16 @@ $(document).ready(function() {
                 ? '<span class="status-badge-active"><i class="fas fa-check-circle"></i> Active</span>'
                 : '<span class="status-badge-inactive"><i class="fas fa-times-circle"></i> Inactive</span>';
 
+            let editDataAttrs = `data-id="${user.id}" data-sname="${escapeHtml(user.sname || '')}" data-fname="${escapeHtml(user.fname || '')}" data-mi="${escapeHtml(user.middleinitial || '')}" data-suffix="${escapeHtml(user.suffix || '')}" data-username="${escapeHtml(user.username || '')}" data-usertype="${escapeHtml(user.usertype || '')}" data-brgy="${escapeHtml(user.brgy || '')}" data-position="${escapeHtml(user.position || '')}" data-delete-status="${user.delete_status}"`;
+
             let actions = user.delete_status === 0
                 ? `<div class="action-buttons-container">
-                    <button class="action-btn-sm edit-user-btn" data-id="${user.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn-sm edit-user-btn" ${editDataAttrs} title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn-sm change-password-btn" data-id="${user.id}" data-name="${escapeHtml(user.full_name)}" data-username="${escapeHtml(user.username)}" title="Change Password"><i class="fas fa-key"></i></button>
                     <button class="action-btn-sm delete-user-btn" data-id="${user.id}" title="Delete"><i class="fas fa-trash"></i></button>
                    </div>`
                 : `<div class="action-buttons-container">
-                    <button class="action-btn-sm edit-user-btn" data-id="${user.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn-sm edit-user-btn" ${editDataAttrs} title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="action-btn-sm restore-user-btn" data-id="${user.id}" title="Restore"><i class="fas fa-undo"></i></button>
                    </div>`;
 
@@ -193,24 +190,24 @@ $(document).ready(function() {
     function bindUserTableEvents() {
         // Edit User
         $(document).on('click', '.edit-user-btn', function() {
-            let userId = $(this).data('id');
-            let row = $(this).closest('tr');
-            
+            let btn = $(this);
+            let userId = btn.data('id');
+
             $('#userId').val(userId);
-            $('#fullName').val(row.find('td:eq(0)').text());
-            $('#username').val(row.find('td:eq(1)').text()).prop('disabled', false);
-            $('#userType').val(row.find('td:eq(2)').text());
-            $('#barangay').val(row.find('td:eq(3)').text());
-            $('#position').val(row.find('td:eq(4)').text());
+            $('#userSname').val(btn.data('sname') || '');
+            $('#userFname').val(btn.data('fname') || '');
+            $('#userMI').val(btn.data('mi') || '');
+            $('#userSuffix').val(btn.data('suffix') || '');
+            $('#username').val(btn.data('username') || '').prop('disabled', false);
+            $('#userType').val(btn.data('usertype') || '');
+            // Handle brgy stored as "Barangay X" or just "X"
+            let brgyVal = String(btn.data('brgy') || '');
+            let brgyMatch = brgyVal.match(/\d+/);
+            $('#barangay').val(brgyMatch ? brgyMatch[0] : brgyVal);
+            $('#position').val(btn.data('position') || '');
             
-            // Determine delete_status from badge
-            let statusText = row.find('td:eq(5)').text();
-            let deleteStatus = statusText.includes('Inactive') ? 1 : 0;
+            let deleteStatus = btn.data('delete-status') || 0;
             $('#deleteStatus').val(deleteStatus);
-            
-            $('#password').val('').prop('required', false).prop('placeholder', 'Leave blank to keep current password');
-            $('#confirmPassword').val('').prop('required', false).prop('placeholder', 'Leave blank to keep current password');
-            $('#deleteStatus').show();
 
             $('#userModalLabel').html('<i class="fas fa-user-edit"></i> Edit User');
             $('#saveUserBtn').text('Update User');
@@ -295,85 +292,142 @@ $(document).ready(function() {
                 }
             });
         });
+
+        // Change User Password
+        $(document).on('click', '.change-password-btn', function() {
+            let userId = $(this).data('id');
+            let userName = $(this).data('name');
+            let username = $(this).data('username');
+            
+            $('#changePasswordUserId').val(userId);
+            $('#changePasswordUsername').text(userName + ' (' + username + ')');
+            $('#generatedPassword').val('');
+            $('#generatedPasswordDisplay').hide();
+            $('#manualPassword').val('');
+            $('#confirmManualPassword').val('');
+            $('#passwordMismatchError').addClass('d-none');
+            
+            let changePasswordModal = new bootstrap.Modal(document.getElementById('changeUserPasswordModal'));
+            changePasswordModal.show();
+        });
+
+        // Generate Password Button
+        $(document).on('click', '#generatePasswordBtn', function() {
+            let userId = $('#changePasswordUserId').val();
+            
+            $.ajax({
+                url: '../Dashboard/ad_function/ad_function_change_user_password.php',
+                type: 'POST',
+                data: {
+                    userId: userId,
+                    action: 'generate'
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 200) {
+                        $('#generatedPassword').val(response.data.password);
+                        $('#generatedPasswordDisplay').show();
+                    } else {
+                        Swal.fire('Error', response.message, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'An error occurred', 'error');
+                }
+            });
+        });
+
+        // Copy Generated Password
+        $(document).on('click', '#copyPasswordBtn', function() {
+            let password = $('#generatedPassword').val();
+            navigator.clipboard.writeText(password).then(() => {
+                Swal.fire('Copied!', 'Password copied to clipboard', 'success');
+            }).catch(err => {
+                Swal.fire('Error', 'Could not copy to clipboard', 'error');
+            });
+        });
+
+        // Confirm Generated Password
+        $(document).on('click', '#confirmGeneratedPasswordBtn', function() {
+            let userId = $('#changePasswordUserId').val();
+            let password = $('#generatedPassword').val();
+            
+            Swal.fire({
+                title: 'Confirm Password Update',
+                text: 'The user will be required to change the password on next login.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Save Password'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '../Dashboard/ad_function/ad_function_change_user_password.php',
+                        type: 'POST',
+                        data: {
+                            userId: userId,
+                            action: 'save',
+                            password: password
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.status === 200) {
+                                Swal.fire('Success', response.message, 'success').then(() => {
+                                    let changePasswordModal = bootstrap.Modal.getInstance(document.getElementById('changeUserPasswordModal'));
+                                    if (changePasswordModal) {
+                                        changePasswordModal.hide();
+                                    }
+                                    loadUsers();
+                                });
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error', 'An error occurred', 'error');
+                        }
+                    });
+                }
+            });
+        });
+
+
     }
 
     // Save User (Add or Update)
     $(document).on('click', '#saveUserBtn', function() {
         let userId = $('#userId').val();
-        let fullName = $('#fullName').val().trim();
+        let sname = $('#userSname').val().trim();
+        let fname = $('#userFname').val().trim();
+        let middleinitial = $('#userMI').val().trim();
+        let suffix = $('#userSuffix').val().trim();
         let username = $('#username').val().trim();
-        let password = $('#password').val();
-        let confirmPassword = $('#confirmPassword').val();
         let userType = $('#userType').val();
         let barangay = $('#barangay').val().trim();
         let position = $('#position').val().trim();
         let deleteStatus = $('#deleteStatus').val() || 0;
 
-        if (!fullName || !username || !userType) {
+        if (!sname || !fname || !username || !userType) {
             Swal.fire('Error', 'Please fill in all required fields', 'error');
-            return;
-        }
-
-        if (!userId && (!password || !confirmPassword)) {
-            Swal.fire('Error', 'Password is required for new users', 'error');
-            return;
-        }
-
-        if (password && password !== confirmPassword) {
-            Swal.fire('Error', 'Passwords do not match', 'error');
-            return;
-        }
-
-        // Password strength validation for new users and edit (only if password provided)
-        if (password) {
-            if (password.length < 12) {
-                Swal.fire('Error', 'Password must be at least 12 characters long', 'error');
-                return;
-            }
-
-            if (!/[A-Z]/.test(password)) {
-                Swal.fire('Error', 'Password must contain at least 1 uppercase letter', 'error');
-                return;
-            }
-
-            if (!/[a-z]/.test(password)) {
-                Swal.fire('Error', 'Password must contain at least 1 lowercase letter', 'error');
-                return;
-            }
-
-            if (!/[0-9]/.test(password)) {
-                Swal.fire('Error', 'Password must contain at least 1 number', 'error');
-                return;
-            }
-
-            if (!/[!@#$%^&*()_+\-=\[\]{};:'",.< >?\/\\|`~]/.test(password)) {
-                Swal.fire('Error', 'Password must contain at least 1 symbol (!@#$%^&*() etc)', 'error');
-                return;
-            }
-        } else if (!userId) {
-            // Password is required for new users
-            Swal.fire('Error', 'Password is required for new users', 'error');
             return;
         }
 
         let action = userId ? 'update_user' : 'add_user';
         let data = {
-            full_name: fullName,
+            sname: sname,
+            fname: fname,
+            middleinitial: middleinitial,
+            suffix: suffix,
             usertype: userType,
             brgy: barangay,
             position: position,
-            delete_status: deleteStatus
+            delete_status: deleteStatus,
+            username: username
         };
 
         if (userId) {
             data.id = userId;
-            data.username = username;
-            if (password) {
-                data.password = password;
-            }
-        } else {
-            data.username = username;
-            data.password = password;
         }
 
         let url = userId ? '../Dashboard/ad_function/ad_function_edit_user.php' : '../Dashboard/ad_function/ad_function_add_user.php';
@@ -385,23 +439,52 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.status === 200) {
-                    Swal.fire('Success', response.message, 'success').then(() => {
-                        // Close modal properly
-                        const userModal = document.getElementById('userModal');
-                        const modalInstance = bootstrap.Modal.getInstance(userModal);
-                        if (modalInstance) {
-                            modalInstance.hide();
-                        }
-                        // Remove backdrop manually if it persists
-                        setTimeout(() => {
-                            const backdrop = document.querySelector('.modal-backdrop');
-                            if (backdrop) {
-                                backdrop.remove();
+                    if (!userId && response.data && response.data.generated_password) {
+                        // For new users, show the generated password
+                        Swal.fire({
+                            title: 'User Added Successfully!',
+                            html: '<p>User has been created with a temporary password:</p><p style="font-weight: bold; font-size: 1.1em; background: #f0f0f0; padding: 10px; border-radius: 5px; word-break: break-all;">' + response.data.generated_password + '</p><p style="color: #666; font-size: 0.9em;">The user will be required to change this password on first login.</p>',
+                            icon: 'success',
+                            confirmButtonText: 'Copy & Close',
+                            allowOutsideClick: false
+                        }).then(() => {
+                            // Copy to clipboard
+                            navigator.clipboard.writeText(response.data.generated_password).catch(err => {
+                                console.log('Failed to copy password');
+                            });
+                            // Close modal
+                            const userModal = document.getElementById('userModal');
+                            const modalInstance = bootstrap.Modal.getInstance(userModal);
+                            if (modalInstance) {
+                                modalInstance.hide();
                             }
-                            document.body.classList.remove('modal-open');
-                            loadUsers();
-                        }, 300);
-                    });
+                            setTimeout(() => {
+                                const backdrop = document.querySelector('.modal-backdrop');
+                                if (backdrop) {
+                                    backdrop.remove();
+                                }
+                                document.body.classList.remove('modal-open');
+                                loadUsers();
+                            }, 300);
+                        });
+                    } else {
+                        // For updates
+                        Swal.fire('Success', response.message, 'success').then(() => {
+                            const userModal = document.getElementById('userModal');
+                            const modalInstance = bootstrap.Modal.getInstance(userModal);
+                            if (modalInstance) {
+                                modalInstance.hide();
+                            }
+                            setTimeout(() => {
+                                const backdrop = document.querySelector('.modal-backdrop');
+                                if (backdrop) {
+                                    backdrop.remove();
+                                }
+                                document.body.classList.remove('modal-open');
+                                loadUsers();
+                            }, 300);
+                        });
+                    }
                 } else {
                     Swal.fire('Error', response.message, 'error');
                 }
@@ -414,62 +497,29 @@ $(document).ready(function() {
 
     // Save Profile Changes
     $(document).on('click', '#saveProfileBtn', function() {
-        let fullName = $('#profileFullName').val().trim();
+        let sname = $('#profileSname').val().trim();
+        let fname = $('#profileFname').val().trim();
+        let middleinitial = $('#profileMI').val().trim();
+        let suffix = $('#profileSuffix').val().trim();
         let username = $('#profileUsername').val().trim();
         let barangay = $('#profileBarangay').val().trim();
         let position = $('#profilePosition').val().trim();
-        let password = $('#profilePassword').val();
-        let confirmPassword = $('#profileConfirmPassword').val();
 
-        if (!fullName || !username) {
-            Swal.fire('Error', 'Full name and username are required', 'error');
+        if (!sname || !fname || !username) {
+            Swal.fire('Error', 'Surname, first name and username are required', 'error');
             return;
-        }
-
-        if (password && password !== confirmPassword) {
-            Swal.fire('Error', 'Passwords do not match', 'error');
-            return;
-        }
-
-        // Password strength validation (only if password provided)
-        if (password) {
-            if (password.length < 12) {
-                Swal.fire('Error', 'Password must be at least 12 characters long', 'error');
-                return;
-            }
-
-            if (!/[A-Z]/.test(password)) {
-                Swal.fire('Error', 'Password must contain at least 1 uppercase letter', 'error');
-                return;
-            }
-
-            if (!/[a-z]/.test(password)) {
-                Swal.fire('Error', 'Password must contain at least 1 lowercase letter', 'error');
-                return;
-            }
-
-            if (!/[0-9]/.test(password)) {
-                Swal.fire('Error', 'Password must contain at least 1 number', 'error');
-                return;
-            }
-
-            if (!/[!@#$%^&*()_+\-=\[\]{};:'",.< >?\/\\|`~]/.test(password)) {
-                Swal.fire('Error', 'Password must contain at least 1 symbol (!@#$%^&*() etc)', 'error');
-                return;
-            }
         }
 
         let data = {
             id: window.currentUID,
-            full_name: fullName,
+            sname: sname,
+            fname: fname,
+            middleinitial: middleinitial,
+            suffix: suffix,
             username: username,
             brgy: barangay,
             position: position
         };
-
-        if (password) {
-            data.password = password;
-        }
 
         $.ajax({
             url: '../Dashboard/ad_function/ad_function_update_profile.php',
@@ -481,10 +531,170 @@ $(document).ready(function() {
                     Swal.fire('Success', 'Profile updated successfully', 'success').then(() => {
                         let profileModal = bootstrap.Modal.getInstance(document.getElementById('profileModal'));
                         profileModal.hide();
-                        // Logout the user after successful profile update
+                        // Refresh the page after successful profile update
                         setTimeout(() => {
-                            window.location.href = '../assets/php/logout.php';
+                            location.reload();
                         }, 500);
+                    });
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'An error occurred', 'error');
+            }
+        });
+    });
+
+    // Change Password
+    $(document).on('click', '#savePasswordBtn', function() {
+        let currentPassword = $('#currentPassword').val().trim();
+        let newPassword = $('#newPassword').val().trim();
+        let confirmPassword = $('#confirmPassword').val().trim();
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            Swal.fire('Error', 'All fields are required', 'error');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            $('#passwordMismatchError').removeClass('d-none');
+            $('#passwordIncorrectError').addClass('d-none');
+            return;
+        }
+
+        $('#passwordMismatchError').addClass('d-none');
+        $('#passwordIncorrectError').addClass('d-none');
+
+        // Password strength validation
+        if (newPassword.length < 12) {
+            Swal.fire('Error', 'Password must be at least 12 characters long', 'error');
+            return;
+        }
+
+        if (!/[A-Z]/.test(newPassword)) {
+            Swal.fire('Error', 'Password must contain at least 1 uppercase letter', 'error');
+            return;
+        }
+
+        if (!/[a-z]/.test(newPassword)) {
+            Swal.fire('Error', 'Password must contain at least 1 lowercase letter', 'error');
+            return;
+        }
+
+        if (!/[0-9]/.test(newPassword)) {
+            Swal.fire('Error', 'Password must contain at least 1 number', 'error');
+            return;
+        }
+
+        if (!/[!@#$%^&*()_+\-=\[\]{};:'",.< >?\/\\|`~]/.test(newPassword)) {
+            Swal.fire('Error', 'Password must contain at least 1 symbol (!@#$%^&*() etc)', 'error');
+            return;
+        }
+
+        $.ajax({
+            url: '../Dashboard/ad_function/ad_function_update_password.php',
+            type: 'POST',
+            data: {
+                currentPassword: currentPassword,
+                newPassword: newPassword
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 200) {
+                    Swal.fire('Success', 'Password updated successfully. You will be logged out.', 'success').then(() => {
+                        let changePasswordModal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+                        if (changePasswordModal) {
+                            changePasswordModal.hide();
+                        }
+                        // Call logout to clear session and redirect to login
+                        $.ajax({
+                            url: '../assets/php/logout.php',
+                            type: 'POST',
+                            data: {},
+                            success: function() {
+                                setTimeout(() => {
+                                    window.location.href = '../index.php';
+                                }, 500);
+                            },
+                            error: function() {
+                                // Even if logout fails, redirect to login
+                                setTimeout(() => {
+                                    window.location.href = '../index.php';
+                                }, 500);
+                            }
+                        });
+                    });
+                } else if (response.status === 401) {
+                    $('#passwordMismatchError').addClass('d-none');
+                    $('#passwordIncorrectError').removeClass('d-none');
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'An error occurred', 'error');
+            }
+        });
+    });
+
+    // Initial Password Change (For users who just had password reset by admin)
+    $(document).on('click', '#saveInitialPasswordBtn', function() {
+        let newPassword = $('#initialNewPassword').val().trim();
+        let confirmPassword = $('#initialConfirmPassword').val().trim();
+
+        if (!newPassword || !confirmPassword) {
+            Swal.fire('Error', 'All fields are required', 'error');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            $('#initialPasswordMismatchError').removeClass('d-none');
+            return;
+        }
+
+        $('#initialPasswordMismatchError').addClass('d-none');
+
+        // Password strength validation
+        if (newPassword.length < 12) {
+            Swal.fire('Error', 'Password must be at least 12 characters long', 'error');
+            return;
+        }
+
+        if (!/[A-Z]/.test(newPassword)) {
+            Swal.fire('Error', 'Password must contain at least 1 uppercase letter', 'error');
+            return;
+        }
+
+        if (!/[a-z]/.test(newPassword)) {
+            Swal.fire('Error', 'Password must contain at least 1 lowercase letter', 'error');
+            return;
+        }
+
+        if (!/[0-9]/.test(newPassword)) {
+            Swal.fire('Error', 'Password must contain at least 1 number', 'error');
+            return;
+        }
+
+        if (!/[^a-zA-Z0-9]/.test(newPassword)) {
+            Swal.fire('Error', 'Password must contain at least 1 symbol', 'error');
+            return;
+        }
+
+        $.ajax({
+            url: '../Dashboard/ad_function/ad_function_update_password.php',
+            type: 'POST',
+            data: {
+                currentPassword: '', // Empty for initial password change (no current password to verify)
+                newPassword: newPassword,
+                isInitialChange: true
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 200) {
+                    Swal.fire('Success', 'Password set successfully!', 'success').then(() => {
+                        // Reload the page to update session and hide modal
+                        window.location.reload();
                     });
                 } else {
                     Swal.fire('Error', response.message, 'error');
@@ -501,8 +711,6 @@ $(document).ready(function() {
         $('#userForm')[0].reset();
         $('#userId').val('');
         $('#username').prop('disabled', false);
-        $('#password').prop('required', true);
-        $('#confirmPassword').prop('required', true);
     }
 
     // Escape HTML to prevent XSS

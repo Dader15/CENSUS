@@ -16,7 +16,7 @@ try {
     
     if ($userType === 'SUPERADMIN') {
         // SUPERADMIN can see all users from all barangays
-        $stmt = $con->prepare("SELECT id, full_name, username, usertype, brgy, position, delete_status, `date created` 
+        $stmt = $con->prepare("SELECT id, sname, fname, middleinitial, suffix, username, usertype, brgy, position, delete_status, `date created` 
                               FROM user_tbl ORDER BY id DESC");
         
         if (!$stmt) {
@@ -26,7 +26,7 @@ try {
         $stmt->execute();
     } else {
         // Non-SUPERADMIN can only see users from their own barangay (and not SUPERADMIN)
-        $stmt = $con->prepare("SELECT id, full_name, username, usertype, brgy, position, delete_status, `date created` 
+        $stmt = $con->prepare("SELECT id, sname, fname, middleinitial, suffix, username, usertype, brgy, position, delete_status, `date created` 
                               FROM user_tbl WHERE brgy = ? AND usertype != 'SUPERADMIN' ORDER BY id DESC");
         
         if (!$stmt) {
@@ -41,6 +41,7 @@ try {
     
     $users = [];
     while ($row = $result->fetch_assoc()) {
+        $row['full_name'] = $row['sname'] . ', ' . $row['fname'] . ' ' . $row['middleinitial'] . ' ' . $row['suffix'];
         $users[] = $row;
     }
     

@@ -10,13 +10,16 @@ $response = [
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $id = isset($_POST["id"]) ? intval($_POST["id"]) : 0;
-    $full_name = isset($_POST["full_name"]) ? mysqli_real_escape_string($con, strtoupper(trim($_POST["full_name"]))) : '';
+    $sname = isset($_POST["sname"]) ? mysqli_real_escape_string($con, strtoupper(trim($_POST["sname"]))) : '';
+    $fname = isset($_POST["fname"]) ? mysqli_real_escape_string($con, strtoupper(trim($_POST["fname"]))) : '';
+    $middleinitial = isset($_POST["middleinitial"]) ? mysqli_real_escape_string($con, strtoupper(trim($_POST["middleinitial"]))) : '';
+    $suffix = isset($_POST["suffix"]) ? mysqli_real_escape_string($con, strtoupper(trim($_POST["suffix"]))) : '';
     $username = isset($_POST["username"]) ? mysqli_real_escape_string($con, strtolower(trim($_POST["username"]))) : '';
     $brgy = isset($_POST["brgy"]) ? mysqli_real_escape_string($con, trim($_POST["brgy"])) : '';
     $position = isset($_POST["position"]) ? mysqli_real_escape_string($con, trim($_POST["position"])) : '';
     $password = isset($_POST["password"]) ? trim($_POST["password"]) : '';
 
-    if (!$id || empty($full_name) || empty($username)) {
+    if (!$id || empty($sname) || empty($fname) || empty($username)) {
         $response['message'] = 'Missing required fields';
     } else {
         // If password is provided, validate it
@@ -33,12 +36,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $response['message'] = 'Password must contain at least 1 symbol (!@#$%^&*() etc)';
             } else {
                 $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-                $update_stmt = $con->prepare("UPDATE user_tbl SET full_name = ?, username = ?, brgy = ?, position = ?, password = ?, updatedat = NOW() WHERE id = ?");
+                $update_stmt = $con->prepare("UPDATE user_tbl SET sname = ?, fname = ?, middleinitial = ?, suffix = ?, username = ?, brgy = ?, position = ?, password = ?, updatedat = NOW() WHERE id = ?");
                 
                 if (!$update_stmt) {
                     $response['message'] = 'Prepare failed: ' . $con->error;
                 } else {
-                    $update_stmt->bind_param("sssssi", $full_name, $username, $brgy, $position, $hashed_password, $id);
+                    $update_stmt->bind_param("ssssssssi", $sname, $fname, $middleinitial, $suffix, $username, $brgy, $position, $hashed_password, $id);
                     
                     if ($update_stmt->execute()) {
                         $response['status'] = 200;
@@ -51,12 +54,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         } else {
             // No password provided, keep existing password
-            $update_stmt = $con->prepare("UPDATE user_tbl SET full_name = ?, username = ?, brgy = ?, position = ?, updatedat = NOW() WHERE id = ?");
+            $update_stmt = $con->prepare("UPDATE user_tbl SET sname = ?, fname = ?, middleinitial = ?, suffix = ?, username = ?, brgy = ?, position = ?, updatedat = NOW() WHERE id = ?");
             
             if (!$update_stmt) {
                 $response['message'] = 'Prepare failed: ' . $con->error;
             } else {
-                $update_stmt->bind_param("ssssi", $full_name, $username, $brgy, $position, $id);
+                $update_stmt->bind_param("ssssssssi", $sname, $fname, $middleinitial, $suffix, $username, $brgy, $position, $id);
                 
                 if ($update_stmt->execute()) {
                     $response['status'] = 200;

@@ -5,7 +5,7 @@ $response = array();
 
 try {
     // Use prepared statements for better security
-    $stmt = $con->prepare("SELECT id, full_name, username, usertype, brgy, position, delete_status, `date created`, updatedat, changedpassword
+    $stmt = $con->prepare("SELECT id, sname, fname, middleinitial, suffix, username, usertype, brgy, position, delete_status, `date created`, updatedat, changedpassword
                         FROM user_tbl
                         ORDER BY id DESC");
     
@@ -21,7 +21,7 @@ try {
         while ($row = $result->fetch_assoc()) {
             $user = array(
                 'id' => $row['id'],
-                'full_name' => $row['full_name'],
+                'full_name' => $row['sname'] . ', ' . $row['fname'] . ' ' . $row['middleinitial'] . ' ' . $row['suffix'],
                 'username' => $row['username'],
                 'usertype' => $row['usertype'],
                 'brgy' => $row['brgy'],

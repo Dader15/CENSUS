@@ -12,16 +12,37 @@
         <form class="needs-validation" id="userForm" novalidate>
           <input type="hidden" id="userId" name="userId">
           
-          <div class="form-row">
-            <div class="col-md-6 mb-3">
-              <label for="fullName">Full Name <span style="color: red;">*</span></label>
+          <div class="form-row four-col">
+            <div class="col-md-3 mb-3">
+              <label for="userSname">Surname <span style="color: red;">*</span></label>
               <div class="input-group">
                 <div class="input-group-prepend">
                   <span class="input-group-text"><i class="fa fa-user"></i></span>
                 </div>
-                <input type="text" class="form-control" id="fullName" placeholder="Full Name" required>
+                <input type="text" class="form-control" id="userSname" placeholder="Surname" required>
               </div>
             </div>
+            <div class="col-md-3 mb-3">
+              <label for="userFname">First Name <span style="color: red;">*</span></label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="userFname" placeholder="First Name" required>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <label for="userMI">M.I.</label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="userMI" placeholder="M.I." maxlength="5">
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <label for="userSuffix">Suffix</label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="userSuffix" placeholder="Suffix" maxlength="10">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
             <div class="col-md-6 mb-3">
               <label for="username">Username <span style="color: red;">*</span></label>
               <div class="input-group">
@@ -31,28 +52,18 @@
                 <input type="text" class="form-control" id="username" placeholder="Username" required>
               </div>
             </div>
+            <div class="col-md-6 mb-3">
+              <label for="position">Position</label>
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text"><i class="fa fa-briefcase"></i></span>
+                </div>
+                <input type="text" class="form-control" id="position" placeholder="Position">
+              </div>
+            </div>
           </div>
 
-          <div class="form-row">
-            <div class="col-md-6 mb-3">
-              <label for="password">Password <span style="color: red;">*</span></label>
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text"><i class="fa fa-lock"></i></span>
-                </div>
-                <input type="password" class="form-control" id="password" placeholder="Min. 12 chars: 1 uppercase, 1 lowercase, 1 number, 1 symbol" required>
-              </div>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label for="confirmPassword">Confirm Password <span style="color: red;">*</span></label>
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text"><i class="fa fa-lock"></i></span>
-                </div>
-                <input type="password" class="form-control" id="confirmPassword" placeholder="Min. 12 chars: 1 uppercase, 1 lowercase, 1 number, 1 symbol" required>
-              </div>
-            </div>
-          </div>
+
 
           <div class="form-row">
             <div class="col-md-6 mb-3">
@@ -88,15 +99,7 @@
           </div>
 
           <div class="form-row">
-            <div class="col-md-6 mb-3">
-              <label for="position">Position</label>
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text"><i class="fa fa-briefcase"></i></span>
-                </div>
-                <input type="text" class="form-control" id="position" placeholder="Position">
-              </div>
-            </div>
+            
             <div class="col-md-6 mb-3">
               <label for="deleteStatus">Status</label>
               <div class="input-group">

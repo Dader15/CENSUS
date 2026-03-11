@@ -36,7 +36,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // Set session variables
             $_SESSION['UID'] = $row['id'];
-            $_SESSION['full_name'] = $row['full_name'];
+            $_SESSION['sname'] = $row['sname'];
+            $_SESSION['fname'] = $row['fname'];
+            $_SESSION['mi'] = $row['middleinitial'];
+            $_SESSION['suffix'] = $row['suffix'];
+            $_SESSION['full_name'] = $row['sname'] . ', ' . $row['fname'] . ' ' . $row['middleinitial'] . ' ' . $row['suffix'];
             $_SESSION['loggedin_time'] = time();
             $_SESSION['session_id'] = $session_id;
 

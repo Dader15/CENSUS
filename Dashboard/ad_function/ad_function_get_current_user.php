@@ -13,7 +13,7 @@ $UID = isset($_SESSION['UID']) ? $_SESSION['UID'] : null;
 if (!$UID) {
     $response['message'] = 'User not logged in';
 } else {
-    $stmt = $con->prepare("SELECT id, full_name, username, usertype, brgy, position, delete_status 
+    $stmt = $con->prepare("SELECT id, sname, fname, middleinitial, suffix, username, usertype, brgy, position, delete_status 
                           FROM user_tbl WHERE id = ? LIMIT 1");
     
     if (!$stmt) {
@@ -24,6 +24,7 @@ if (!$UID) {
         $result = $stmt->get_result();
         
         if ($row = $result->fetch_assoc()) {
+            $row['full_name'] = $row['sname'] . ', ' . $row['fname'] . ' ' . $row['middleinitial'] . ' ' . $row['suffix'];
             $response['status'] = 200;
             $response['message'] = 'User retrieved successfully';
             $response['data'] = $row;
