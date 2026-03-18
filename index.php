@@ -13,7 +13,7 @@ include_once 'connection/config.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Caloocan City Hall Messenger</title>
+    <title>stry of Barangay Inhabitants and Migrants</title>
     <link href="assets/img/caloocan.png" rel="icon">
     <link rel="stylesheet" href="assets/css/styles.css">
 </head>
@@ -31,7 +31,7 @@ include_once 'connection/config.php';
                     <img src="assets/img/caloocan.png" alt="Caloocan Logo" class="logo-img">
                 </div>
                 <h1 class="login-title">Caloocan City Hall</h1>
-                <p class="login-subtitle">Caloocan Census</p>
+                <p class="login-subtitle">Registry of Barangay Inhabitants and Migrants</p>
             </div>
 
             <!-- Form Section -->

@@ -1,6 +1,6 @@
 /**
- * Census Form Builder - Multi-step Google Form Style Census Data Entry
- * Matches census_system.html design with card-based layout
+ * RBIM Form Builder - Multi-step Google Form Style Registry Data Entry
+ * Card-based layout for Registry of Barangay Inhabitants and Migrants
  */
 
 class CensusFormBuilder {
@@ -17,34 +17,38 @@ class CensusFormBuilder {
             respondent_surname: '',
             respondent_firstname: '',
             respondent_mi: '',
+            respondent_suffix: '',
             respondent_name: '', // composed
             household_head_surname: '',
             household_head_firstname: '',
             household_head_mi: '',
+            household_head_suffix: '',
             household_head: '', // composed
-            province: '',
-            city: '',
-            barangay: '',
+            province: 'NCR',
+            city: 'Caloocan City',
+            barangay: window.userBrgy || '',
             address_unit: '',
             address_house: '',
             address_street: '',
-            time_start: this.getFormattedTime(),
-            interviewer_surname: '',
-            interviewer_firstname: '',
-            interviewer_mi: '',
+            time_start: this.getNowDateTimeLocal(),
+            interviewer_surname: window.interviewerData?.surname || '',
+            interviewer_firstname: window.interviewerData?.firstname || '',
+            interviewer_mi: window.interviewerData?.mi || '',
+            interviewer_suffix: window.interviewerData?.suffix || '',
             interviewer_name: '', // composed
-            interviewer_date: '',
-            supervisor_surname: '',
-            supervisor_firstname: '',
-            supervisor_mi: '',
+            interviewer_date: this.getNowDateTimeLocal(),
+            supervisor_surname: window.supervisorData?.surname || '',
+            supervisor_firstname: window.supervisorData?.firstname || '',
+            supervisor_mi: window.supervisorData?.mi || '',
+            supervisor_suffix: window.supervisorData?.suffix || '',
             supervisor_name: '', // composed
-            supervisor_date: '',
+            supervisor_date: this.getNowDateTimeLocal(),
             encoder_name: this.getEncoderName(),
-            date_encoded: this.getTodayDate(),
+            date_encoded: this.getNowDateTimeLocal(),
             total_members: 1
         };
 
-        // Step 2: Census Questions (Members) - Matching census_system.html structure
+        // Step 2: RBIM Questions (Members)
         this.QUESTIONS = [
             {
                 id: 'Q1',
@@ -84,6 +88,16 @@ class CensusFormBuilder {
                     'Boarder',
                     'Domestic Helper'
                 ]
+            },
+            {
+                id: 'Q2_others',
+                badge: '',
+                label: 'Specify Other Relationship',
+                hint: 'Please specify relationship to household head',
+                type: 'text',
+                required: true,
+                placeholder: 'Specify relationship',
+                showIf: { id: 'Q2', val: 'Other Relative' }
             },
             {
                 id: 'Q3',
@@ -226,7 +240,8 @@ class CensusFormBuilder {
                     'Senior High School',
                     'Vocational/Technical',
                     'College/University'
-                ]
+                ],
+                showIf: { id: 'Q12', val: (val) => val === 'Yes, public' || val === 'Yes, private' }
             },
             {
                 id: 'Q14',
@@ -235,7 +250,8 @@ class CensusFormBuilder {
                 hint: 'Name or location of school',
                 type: 'text',
                 required: false,
-                placeholder: 'Enter school name or location'
+                placeholder: 'Enter school name or location',
+                showIf: { id: 'Q12', val: (val) => val === 'Yes, public' || val === 'Yes, private' }
             },
             {
                 id: 'Q15',
@@ -261,6 +277,16 @@ class CensusFormBuilder {
                     'Others'
                 ],
                 showIf: { id: 'Q15', val: (val) => val && parseInt(val) !== 0 }
+            },
+            {
+                id: 'Q16_others',
+                badge: '',
+                label: 'Specify Others (Source of Income)',
+                hint: 'Please specify other source of income',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q16', val: 'Others' }
             },
             {
                 id: 'Q17',
@@ -305,6 +331,16 @@ class CensusFormBuilder {
                 ]
             },
             {
+                id: 'Q19_others',
+                badge: '',
+                label: 'Specify Others (Place of Delivery)',
+                hint: 'Please specify other place of delivery',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q19', val: 'Others' }
+            },
+            {
                 id: 'Q20',
                 badge: 'Q20',
                 label: 'Birth Attendant',
@@ -318,6 +354,16 @@ class CensusFormBuilder {
                     'Hilot',
                     'Others'
                 ]
+            },
+            {
+                id: 'Q20_others',
+                badge: '',
+                label: 'Specify Others (Birth Attendant)',
+                hint: 'Please specify other birth attendant',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q20', val: 'Others' }
             },
             {
                 id: 'Q21',
@@ -376,6 +422,16 @@ class CensusFormBuilder {
                 showIf: { id: 'Q23', val: (val) => val && val !== 'None' && val !== '' }
             },
             {
+                id: 'Q24_others',
+                badge: '',
+                label: 'Specify Others (Source of FP Method)',
+                hint: 'Please specify other source of FP method',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q24', val: 'Other' }
+            },
+            {
                 id: 'Q25',
                 badge: 'Q25',
                 label: 'Intention to Use FP',
@@ -387,8 +443,712 @@ class CensusFormBuilder {
                     'No'
                 ],
                 showIf: { id: 'Q23', val: (val) => !val || val === 'None' || val === '' }
+            },
+            // === STEP 4: Health Insurance, Disability, Socio-Civic, Migration Part 1 ===
+            {
+                id: 'Q26',
+                badge: 'Q26',
+                label: 'Health Insurance',
+                hint: 'Type of health insurance',
+                type: 'select',
+                required: false,
+                options: [
+                    'None',
+                    'PhilHealth paying member',
+                    'PhilHealth dependent of paying member',
+                    'PhilHealth indigent member',
+                    'PhilHealth dependent of indigent member',
+                    'GSIS',
+                    'SSS',
+                    'Private/HMO',
+                    'Others'
+                ]
+            },
+            {
+                id: 'Q26_others',
+                badge: '',
+                label: 'Specify Others (Health Insurance)',
+                hint: 'Please specify other health insurance',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q26', val: 'Others' }
+            },
+            {
+                id: 'Q27',
+                badge: 'Q27',
+                label: 'Health Facility Visited',
+                hint: 'Health facility visited in the past 12 months',
+                type: 'select',
+                required: false,
+                options: [
+                    'None',
+                    'Government hospital',
+                    'RHU/Health center',
+                    'Brgy. Health Station',
+                    'Private hospital',
+                    'Private clinic',
+                    'Pharmacy',
+                    'Hilot/Herbalist',
+                    'Other facility'
+                ]
+            },
+            {
+                id: 'Q27_others',
+                badge: '',
+                label: 'Specify Other Facility',
+                hint: 'Please specify other facility visited',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify other facility',
+                showIf: { id: 'Q27', val: 'Other facility' }
+            },
+            {
+                id: 'Q28',
+                badge: 'Q28',
+                label: 'Reason for Facility Visit',
+                hint: 'Reason for visiting health facility',
+                type: 'select',
+                required: false,
+                options: [
+                    'Sick/Injured',
+                    'Prenatal/Postnatal',
+                    'Gave birth',
+                    'Dental',
+                    'Medical check-up',
+                    'Medical requirement',
+                    'NHTS/CCT/4Ps requirement',
+                    'Other reason'
+                ],
+                showIf: { id: 'Q27', val: (val) => val && val !== 'None' && val !== '' }
+            },
+            {
+                id: 'Q28_others',
+                badge: '',
+                label: 'Specify Other Reason for Visit',
+                hint: 'Please specify other reason for facility visit',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify other reason',
+                showIf: { id: 'Q28', val: 'Other reason' }
+            },
+            {
+                id: 'Q29',
+                badge: 'Q29',
+                label: 'Disability',
+                hint: 'Type of disability (if any)',
+                type: 'select',
+                required: false,
+                options: [
+                    'None',
+                    'Psychosocial Disability',
+                    'Chronic Illness',
+                    'Learning Disability',
+                    'Mental Disability',
+                    'Visual Disability',
+                    'Orthopedic Disability',
+                    'Hearing Disability',
+                    'Speech Impairment',
+                    'Multiple Disability'
+                ]
+            },
+            {
+                id: 'Q30',
+                badge: 'Q30',
+                label: 'Solo Parent',
+                hint: 'Solo parent status',
+                type: 'select',
+                required: false,
+                options: [
+                    'Registered Solo Parent',
+                    'Non-Solo Parent',
+                    'Unregistered Solo Parent'
+                ]
+            },
+            {
+                id: 'Q31',
+                badge: 'Q31',
+                label: 'Registered Senior Citizen',
+                hint: 'Is the member a registered senior citizen?',
+                type: 'select',
+                required: false,
+                options: ['Yes', 'No']
+            },
+            {
+                id: 'Q32',
+                badge: 'Q32',
+                label: 'Registered Voter',
+                hint: 'Barangay where HH member is registered as voter',
+                type: 'text',
+                required: false,
+                placeholder: 'Enter barangay name (or N/A if not registered)'
+            },
+            {
+                id: 'Q33',
+                badge: 'Q33',
+                label: 'Previous Residence 5 Years Ago (Barangay)',
+                hint: 'Barangay where the household member resided five years ago',
+                type: 'text',
+                required: false,
+                placeholder: 'Enter barangay'
+            },
+            {
+                id: 'Q34',
+                badge: 'Q34',
+                label: 'Previous Residence 6 Months Ago (City/Municipality)',
+                hint: 'City/Municipality where the household member resided 6 months ago',
+                type: 'text',
+                required: false,
+                placeholder: 'Enter city or municipality'
+            },
+            {
+                id: 'Q35',
+                badge: 'Q35',
+                label: 'Length of Stay in Barangay',
+                hint: 'How long has the member stayed in this barangay?',
+                type: 'text',
+                required: false,
+                placeholder: 'e.g. 5 years, 6 months'
+            },
+            {
+                id: 'Q36',
+                badge: 'Q36',
+                label: 'Type of Resident',
+                hint: 'Resident type in the barangay',
+                type: 'select',
+                required: false,
+                options: [
+                    'Non-Migrant',
+                    'Migrant',
+                    'Transient'
+                ]
+            },
+            // === STEP 5: Migration Part 2, CTC, Skills Development ===
+            {
+                id: 'Q37',
+                badge: 'Q37',
+                label: 'Date of Transfer',
+                hint: 'When did the member transfer to this barangay? (MM/DD/YYYY)',
+                type: 'datetime-local',
+                required: false,
+                placeholder: 'MM/DD/YYYY',
+                showIf: { id: 'Q36', val: (val) => val === 'Migrant' || val === 'Transient' }
+            },
+            {
+                id: 'Q38a',
+                badge: 'Q38a',
+                label: 'Reason for Leaving Previous Residence',
+                hint: 'Main reason for leaving previous residence',
+                type: 'select',
+                required: false,
+                options: [
+                    'Lack of employment',
+                    'Perception of better income in other place',
+                    'Schooling',
+                    'Presence of relatives and friends in other place',
+                    'Employment/Job Relocation',
+                    'Disaster-related Relocation',
+                    'Retirement',
+                    'To live with Parents',
+                    'To live with Children',
+                    'Marriage',
+                    'Annulment/Divorce/Separation',
+                    'Commuting-related Reasons',
+                    'Health-related Reasons',
+                    'Peace and Security',
+                    'Others'
+                ],
+                showIf: { id: 'Q36', val: (val) => val === 'Migrant' || val === 'Transient' }
+            },
+            {
+                id: 'Q38a_others',
+                badge: '',
+                label: 'Specify Others (Reason for Leaving)',
+                hint: 'Please specify other reason for leaving previous residence',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q38a', val: 'Others' }
+            },
+            {
+                id: 'Q38b',
+                badge: 'Q38b',
+                label: 'Additional Reason for Leaving (2)',
+                hint: 'Second reason (if any)',
+                type: 'select',
+                required: false,
+                options: [
+                    'None',
+                    'Lack of employment',
+                    'Perception of better income in other place',
+                    'Schooling',
+                    'Presence of relatives and friends in other place',
+                    'Employment/Job Relocation',
+                    'Disaster-related Relocation',
+                    'Retirement',
+                    'To live with Parents',
+                    'To live with Children',
+                    'Marriage',
+                    'Annulment/Divorce/Separation',
+                    'Commuting-related Reasons',
+                    'Health-related Reasons',
+                    'Peace and Security',
+                    'Others'
+                ],
+                showIf: { id: 'Q36', val: (val) => val === 'Migrant' || val === 'Transient' }
+            },
+            {
+                id: 'Q38b_others',
+                badge: '',
+                label: 'Specify Others (Additional Reason for Leaving 2)',
+                hint: 'Please specify other reason',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q38b', val: 'Others' }
+            },
+            {
+                id: 'Q38c',
+                badge: 'Q38c',
+                label: 'Additional Reason for Leaving (3)',
+                hint: 'Third reason (if any)',
+                type: 'select',
+                required: false,
+                options: [
+                    'None',
+                    'Lack of employment',
+                    'Perception of better income in other place',
+                    'Schooling',
+                    'Presence of relatives and friends in other place',
+                    'Employment/Job Relocation',
+                    'Disaster-related Relocation',
+                    'Retirement',
+                    'To live with Parents',
+                    'To live with Children',
+                    'Marriage',
+                    'Annulment/Divorce/Separation',
+                    'Commuting-related Reasons',
+                    'Health-related Reasons',
+                    'Peace and Security',
+                    'Others'
+                ],
+                showIf: { id: 'Q36', val: (val) => val === 'Migrant' || val === 'Transient' }
+            },
+            {
+                id: 'Q38c_others',
+                badge: '',
+                label: 'Specify Others (Additional Reason for Leaving 3)',
+                hint: 'Please specify other reason',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q38c', val: 'Others' }
+            },
+            {
+                id: 'Q39a',
+                badge: 'Q39a',
+                label: 'Plan to Return to Previous Residence',
+                hint: 'Does the member plan to return to previous residence?',
+                type: 'select',
+                required: false,
+                options: ['Yes', 'No'],
+                showIf: { id: 'Q36', val: (val) => val === 'Migrant' || val === 'Transient' }
+            },
+            {
+                id: 'Q39b',
+                badge: 'Q39b',
+                label: 'When to Return',
+                hint: 'When does the member plan to return?',
+                type: 'datetime-local',
+                required: false,
+                placeholder: 'Enter expected return date/period',
+                showIf: { id: 'Q39a', val: 'Yes' }
+            },
+            {
+                id: 'Q40a',
+                badge: 'Q40a',
+                label: 'Reason for Transferring to This Barangay',
+                hint: 'Main reason for transferring/staying in this barangay',
+                type: 'select',
+                required: false,
+                options: [
+                    'Availability of jobs',
+                    'Higher wage',
+                    'Availability of schools or universities',
+                    'Presence of relatives and friends',
+                    'Others'
+                ],
+                showIf: { id: 'Q36', val: (val) => val === 'Migrant' || val === 'Transient' }
+            },
+            {
+                id: 'Q40a_others',
+                badge: '',
+                label: 'Specify Others (Reason for Transferring)',
+                hint: 'Please specify other reason for transferring',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q40a', val: 'Others' }
+            },
+            {
+                id: 'Q40b',
+                badge: 'Q40b',
+                label: 'Additional Reason for Transferring (2)',
+                hint: 'Second reason (if any)',
+                type: 'select',
+                required: false,
+                options: [
+                    'None',
+                    'Availability of jobs',
+                    'Higher wage',
+                    'Availability of schools or universities',
+                    'Presence of relatives and friends',
+                    'Others'
+                ],
+                showIf: { id: 'Q36', val: (val) => val === 'Migrant' || val === 'Transient' }
+            },
+            {
+                id: 'Q40b_others',
+                badge: '',
+                label: 'Specify Others (Additional Reason for Transferring 2)',
+                hint: 'Please specify other reason',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q40b', val: 'Others' }
+            },
+            {
+                id: 'Q40c',
+                badge: 'Q40c',
+                label: 'Additional Reason for Transferring (3)',
+                hint: 'Third reason (if any)',
+                type: 'select',
+                required: false,
+                options: [
+                    'None',
+                    'Availability of jobs',
+                    'Higher wage',
+                    'Availability of schools or universities',
+                    'Presence of relatives and friends',
+                    'Others'
+                ],
+                showIf: { id: 'Q36', val: (val) => val === 'Migrant' || val === 'Transient' }
+            },
+            {
+                id: 'Q40c_others',
+                badge: '',
+                label: 'Specify Others (Additional Reason for Transferring 3)',
+                hint: 'Please specify other reason',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q40c', val: 'Others' }
+            },
+            {
+                id: 'Q41a',
+                badge: 'Q41a',
+                label: 'Duration of Stay in Current Barangay',
+                hint: 'How long has the member stayed in this barangay? (MM/DD/YYYY)',
+                type: 'datetime-local',
+                required: false,
+                placeholder: 'MM/DD/YYYY',
+                showIf: { id: 'Q36', val: (val) => val === 'Migrant' || val === 'Transient' }
+            },
+            {
+                id: 'Q41b',
+                badge: 'Q41b',
+                label: 'Staying With Whom',
+                hint: 'With whom is the member staying?',
+                type: 'text',
+                required: false,
+                placeholder: 'Enter name or relationship',
+                showIf: { id: 'Q36', val: 'Transient' }
+            },
+            {
+                id: 'Q42a',
+                badge: 'Q42a',
+                label: 'Community Tax Certificate (CTC)',
+                hint: 'Has the member obtained a Community Tax Certificate?',
+                type: 'select',
+                required: false,
+                options: ['Yes', 'No']
+            },
+            {
+                id: 'Q42b',
+                badge: 'Q42b',
+                label: 'CTC Information',
+                hint: 'Is CTC information available?',
+                type: 'select',
+                required: false,
+                options: ['Yes', 'No'],
+                showIf: { id: 'Q42a', val: 'Yes' }
+            },
+            {
+                id: 'Q43',
+                badge: 'Q43',
+                label: 'Skills Development/Training',
+                hint: 'Type of skills development training the HH member is interested in',
+                type: 'text',
+                required: false,
+                placeholder: 'Enter training interested in'
+            },
+            {
+                id: 'Q44',
+                badge: 'Q44',
+                label: 'Skills',
+                hint: 'Most prominent skill of the member',
+                type: 'select',
+                required: false,
+                options: [
+                    'None',
+                    'Refrigeration and Airconditioning',
+                    'Automotive/Heavy Equipment Servicing',
+                    'Metal Worker',
+                    'Building Wiring Installation',
+                    'Heavy Equipment Operation',
+                    'Plumbing',
+                    'Welding',
+                    'Carpentry',
+                    'Baking',
+                    'Dressmaking',
+                    'Linguist',
+                    'Computer Graphics',
+                    'Painting',
+                    'Beauty Care',
+                    'Commercial Cooking',
+                    'Housekeeping',
+                    'Massage Therapy',
+                    'Others'
+                ]
+            },
+            {
+                id: 'Q44_others',
+                badge: '',
+                label: 'Specify Others (Skills)',
+                hint: 'Please specify other prominent skill',
+                type: 'text',
+                required: false,
+                placeholder: 'Specify others',
+                showIf: { id: 'Q44', val: 'Others' }
             }
         ];
+
+        // Household-level questions (Step 6) - not per-member
+        this.HOUSEHOLD_QUESTIONS = [
+            {
+                id: 'Q45', badge: 'Q45',
+                label: 'Housing Unit Ownership',
+                hint: 'Do you own or amortize this housing unit occupied by your household, or rent, or occupy rent-free?',
+                type: 'select',
+                options: ['Rent-free without consent of owner', 'Rent-free with consent of owner', 'Rented', 'Owned/being amortized']
+            },
+            {
+                id: 'Q46', badge: 'Q46',
+                label: 'Lot Ownership',
+                hint: 'Do you own or amortize this lot occupied by your household, or rent, or occupy rent-free?',
+                type: 'select',
+                options: ['Rent-free without consent of owner', 'Rent-free with consent of owner', 'Rented', 'Owned/being amortized']
+            },
+            {
+                id: 'Q47', badge: 'Q47',
+                label: 'Fuel for Lighting',
+                hint: 'What type of fuel does this household use for lighting?',
+                type: 'select',
+                options: ['None', 'Oil (vegetable, animal, others)', 'Liquefied petroleum gas (LPG)', 'Kerosene (gaas)', 'Electricity', 'Others']
+            },
+            {
+                id: 'Q47_others', badge: '',
+                label: 'Specify Others (Fuel for Lighting)',
+                hint: 'Please specify other fuel for lighting',
+                type: 'text',
+                placeholder: 'Specify others',
+                showIf: { id: 'Q47', val: 'Others' }
+            },
+            {
+                id: 'Q48', badge: 'Q48',
+                label: 'Fuel for Cooking',
+                hint: 'What kind of fuel does this household use most of the time for cooking?',
+                type: 'select',
+                options: ['None', 'Wood', 'Charcoal', 'Liquefied petroleum gas (LPG)', 'Kerosene (gaas)', 'Electricity', 'Others']
+            },
+            {
+                id: 'Q48_others', badge: '',
+                label: 'Specify Others (Fuel for Cooking)',
+                hint: 'Please specify other fuel for cooking',
+                type: 'text',
+                placeholder: 'Specify others',
+                showIf: { id: 'Q48', val: 'Others' }
+            },
+            {
+                id: 'Q49', badge: 'Q49',
+                label: 'Main Source of Drinking Water',
+                hint: "What is the household's main source of drinking water?",
+                type: 'select',
+                options: ['Lake, river, rain, others', 'Dug well', 'Unprotected spring', 'Protected spring', 'Peddler', 'Tubed/Piped shallow well', 'Shared, tubed/piped deep well', 'Own use, tubed/piped deep well', 'Shared, faucet community water system', 'Own use, faucet community water system', 'Bottled water', 'Others']
+            },
+            {
+                id: 'Q49_others', badge: '',
+                label: 'Specify Others (Drinking Water Source)',
+                hint: 'Please specify other source of drinking water',
+                type: 'text',
+                placeholder: 'Specify others',
+                showIf: { id: 'Q49', val: 'Others' }
+            },
+            {
+                id: 'Q50a', badge: 'Q50a',
+                label: 'Kitchen Garbage Disposal',
+                hint: 'How does your household usually dispose of kitchen garbage?',
+                type: 'select',
+                options: ['Feeding to animals', 'Burying', 'Composting', 'Burning', 'Dumping individual pit (not burned)', 'Picked-up by garbage truck', 'Others']
+            },
+            {
+                id: 'Q50a_others', badge: '',
+                label: 'Specify Others (Kitchen Garbage Disposal)',
+                hint: 'Please specify other method of kitchen garbage disposal',
+                type: 'text',
+                placeholder: 'Specify others',
+                showIf: { id: 'Q50a', val: 'Others' }
+            },
+            {
+                id: 'Q50b', badge: 'Q50b',
+                label: 'Garbage Segregation',
+                hint: 'Do you segregate your garbage?',
+                type: 'select',
+                options: ['Yes', 'No']
+            },
+            {
+                id: 'Q51', badge: 'Q51',
+                label: 'Toilet Facility',
+                hint: 'What type of toilet facility does this household use?',
+                type: 'select',
+                options: ['None', 'Open pit', 'Close pit', 'Water-sealed, other depository, shared', 'Water-sealed, other depository, exclusive', 'Water-sealed, sewer septic tank, shared', 'Water-sealed, sewer septic tank, exclusive', 'Others']
+            },
+            {
+                id: 'Q51_others', badge: '',
+                label: 'Specify Others (Toilet Facility)',
+                hint: 'Please specify other toilet facility',
+                type: 'text',
+                placeholder: 'Specify others',
+                showIf: { id: 'Q51', val: 'Others' }
+            },
+            {
+                id: 'Q52', badge: 'Q52',
+                label: 'Type of Building/House',
+                hint: 'Type of building/house (observation only)',
+                type: 'select',
+                options: ['Single house', 'Duplex', 'Multi-unit residential (three units or more)', 'Commercial/industrial/agricultural', 'Institutional living quarter (hotel, hospital)', 'Other housing units (boat, cave, others)']
+            },
+            {
+                id: 'Q52_others', badge: '',
+                label: 'Specify Others (Type of Building/House)',
+                hint: 'Please specify other type of building/house',
+                type: 'text',
+                placeholder: 'Specify others',
+                showIf: { id: 'Q52', val: 'Other housing units (boat, cave, others)' }
+            },
+            {
+                id: 'Q53', badge: 'Q53',
+                label: 'Construction Materials of Outer Wall',
+                hint: 'Construction materials of the outer wall (observation only)',
+                type: 'select',
+                options: ['No walls', 'Makeshift/salvaged/improvised materials', 'Glass', 'Asbestos', 'Bamboo/Sawali/Cogon/Nipa', 'Galvanized iron/aluminum', 'Half concrete/brick/stone and half wood', 'Wood', 'Concrete/brick/stone', 'Others']
+            },
+            {
+                id: 'Q53_others', badge: '',
+                label: 'Specify Others (Construction Materials)',
+                hint: 'Please specify other construction materials',
+                type: 'text',
+                placeholder: 'Specify others',
+                showIf: { id: 'Q53', val: 'Others' }
+            },
+            {
+                id: 'Q54a', badge: 'Q54a',
+                label: 'Female Member Death - Age',
+                hint: 'Do you have any female member who died in the past 12 months? How old is she?',
+                type: 'text', placeholder: 'Enter age (leave blank if none)'
+            },
+            {
+                id: 'Q54b', badge: 'Q54b',
+                label: 'Female Member Death - Cause',
+                hint: 'What is the cause of her death?',
+                type: 'text', placeholder: 'Enter cause of death'
+            },
+            {
+                id: 'Q55a', badge: 'Q55a',
+                label: 'Child (Below 5) Death - Age',
+                hint: 'Do you have a child below 5 years old who died in the past 12 months? How old?',
+                type: 'text', placeholder: 'Enter age (leave blank if none)'
+            },
+            {
+                id: 'Q55b', badge: 'Q55b',
+                label: 'Child (Below 5) Death - Sex',
+                hint: 'Sex of the child',
+                type: 'select', options: ['Male', 'Female']
+            },
+            {
+                id: 'Q55c', badge: 'Q55c',
+                label: 'Child (Below 5) Death - Cause',
+                hint: 'What is the cause of the child\'s death?',
+                type: 'text', placeholder: 'Enter cause of death'
+            },
+            {
+                id: 'Q56a', badge: 'Q56a',
+                label: 'Common Disease Causing Death (1)',
+                hint: 'What are the common diseases that cause death in this barangay?',
+                type: 'text', placeholder: 'Disease 1'
+            },
+            {
+                id: 'Q56b', badge: 'Q56b',
+                label: 'Common Disease Causing Death (2)',
+                hint: 'Second common disease',
+                type: 'text', placeholder: 'Disease 2 (optional)'
+            },
+            {
+                id: 'Q56c', badge: 'Q56c',
+                label: 'Common Disease Causing Death (3)',
+                hint: 'Third common disease',
+                type: 'text', placeholder: 'Disease 3 (optional)'
+            },
+            {
+                id: 'Q57a', badge: 'Q57a',
+                label: 'Primary Need of Barangay (1)',
+                hint: 'What do you think are the primary needs of this barangay?',
+                type: 'text', placeholder: 'Need 1'
+            },
+            {
+                id: 'Q57b', badge: 'Q57b',
+                label: 'Primary Need of Barangay (2)',
+                hint: 'Second primary need',
+                type: 'text', placeholder: 'Need 2 (optional)'
+            },
+            {
+                id: 'Q57c', badge: 'Q57c',
+                label: 'Primary Need of Barangay (3)',
+                hint: 'Third primary need',
+                type: 'text', placeholder: 'Need 3 (optional)'
+            },
+            {
+                id: 'Q58a', badge: 'Q58a',
+                label: 'Household Intends to Stay (Barangay)',
+                hint: 'Where does your household intend to stay five years from now?',
+                type: 'text', placeholder: 'Barangay'
+            },
+            {
+                id: 'Q58b', badge: 'Q58b',
+                label: 'Household Intends to Stay (City)',
+                hint: 'City/Municipality',
+                type: 'text', placeholder: 'City/Municipality'
+            },
+            {
+                id: 'Q58c', badge: 'Q58c',
+                label: 'Household Intends to Stay (Province)',
+                hint: 'Province',
+                type: 'text', placeholder: 'Province'
+            }
+        ];
+
+        // Household questions data (Step 6)
+        this.householdQuestionsData = {};
 
         // Age requirements for each question
         this.ageRequirements = {
@@ -406,7 +1166,29 @@ class CensusFormBuilder {
             Q22: (age) => { const a = parseInt(age); return a >= 10 && a <= 54; }, // Living Children: women 10-54
             Q23: (age) => { const a = parseInt(age); return a >= 10 && a <= 54; }, // FP Use: women 10-54
             Q24: (age) => { const a = parseInt(age); return a >= 10 && a <= 54; }, // Source of FP: women 10-54
-            Q25: (age) => { const a = parseInt(age); return a >= 10 && a <= 54; }  // Intention to Use FP: women 10-54
+            Q25: (age) => { const a = parseInt(age); return a >= 10 && a <= 54; }, // Intention to Use FP: women 10-54
+            Q30: (age) => parseInt(age) >= 10,          // Solo Parent: 10+
+            Q31: (age) => parseInt(age) >= 60,          // Senior Citizen: 60+
+            Q32: (age) => parseInt(age) >= 15,          // Registered Voter: 15+
+            Q33: (age) => parseInt(age) >= 5,           // Previous Residence: 5+
+            Q34: (age) => parseInt(age) >= 5,           // Previous Residence City: 5+
+            Q35: (age) => parseInt(age) >= 5,           // Length of Stay: 5+
+            Q36: (age) => parseInt(age) >= 5,           // Type of Resident: 5+
+            Q37: (age) => parseInt(age) >= 5,           // Date of Transfer: 5+
+            Q38a: (age) => parseInt(age) >= 5,          // Reason for Leaving: 5+
+            Q38b: (age) => parseInt(age) >= 5,
+            Q38c: (age) => parseInt(age) >= 5,
+            Q39a: (age) => parseInt(age) >= 5,          // Return to Prev Residence: 5+
+            Q39b: (age) => parseInt(age) >= 5,
+            Q40a: (age) => parseInt(age) >= 5,          // Reason for Staying: 5+
+            Q40b: (age) => parseInt(age) >= 5,
+            Q40c: (age) => parseInt(age) >= 5,
+            Q41a: (age) => parseInt(age) >= 5,          // Duration of Stay: 5+
+            Q41b: (age) => parseInt(age) >= 5,
+            Q42a: (age) => parseInt(age) >= 18,         // CTC: 18+
+            Q42b: (age) => parseInt(age) >= 18,
+            Q43: (age) => parseInt(age) >= 15,          // Skills Development: 15+
+            Q44: (age) => parseInt(age) >= 15           // Skills: 15+
         };
 
         // Sex requirements for questions (only show for specific sex)
@@ -422,9 +1204,11 @@ class CensusFormBuilder {
 
     init() {
         this.setupEventListeners();
-        this.renderStep1();
-        this.updateProgress();
-        this.attachCloseButton();
+        this.loadFromSession(() => {
+            this.renderStep1();
+            this.updateProgress();
+            this.attachCloseButton();
+        });
     }
 
     attachCloseButton() {
@@ -449,27 +1233,46 @@ class CensusFormBuilder {
         // Household code radio
         $(document).on('change', 'input[name="household_code"]', (e) => {
             this.householdData.household_code = e.target.value;
+            this.scheduleSaveToSession();
         });
         $(document).on('change', '#household_code_number', (e) => {
             this.householdData.household_code_number = e.target.value;
+            this.scheduleSaveToSession();
         });
         
         // Step 1 inputs - name fields (split into surname, firstname, MI)
         const composeNameListener = (prefix, dataKey) => {
-            $(document).on('input', `#${prefix}_surname, #${prefix}_firstname, #${prefix}_mi`, () => {
+            $(document).on('input', `#${prefix}_surname, #${prefix}_firstname, #${prefix}_mi, #${prefix}_suffix`, () => {
                 const s = $(`#${prefix}_surname`).val() || '';
                 const f = $(`#${prefix}_firstname`).val() || '';
                 const m = $(`#${prefix}_mi`).val() || '';
+                const sx = $(`#${prefix}_suffix`).val() || '';
                 this.householdData[`${prefix}_surname`] = s;
                 this.householdData[`${prefix}_firstname`] = f;
                 this.householdData[`${prefix}_mi`] = m;
-                this.householdData[dataKey] = [s, f, m ? m + '.' : ''].filter(Boolean).join(', ').replace(/,\s*$/, '');
+                this.householdData[`${prefix}_suffix`] = sx;
+                this.householdData[dataKey] = [s, f, m ? m + '.' : '', sx].filter(Boolean).join(', ').replace(/,\s*$/, '');
+                this.scheduleSaveToSession();
             });
         };
         composeNameListener('respondent', 'respondent_name');
         composeNameListener('household_head', 'household_head');
         composeNameListener('interviewer', 'interviewer_name');
         composeNameListener('supervisor', 'supervisor_name');
+
+        // "Same as Respondent" checkbox for Household Head
+        $(document).on('change', '#sameAsRespondent', (e) => {
+            if (e.target.checked) {
+                const s = $('#respondent_surname').val() || '';
+                const f = $('#respondent_firstname').val() || '';
+                const m = $('#respondent_mi').val() || '';
+                const sx = $('#respondent_suffix').val() || '';
+                $('#household_head_surname').val(s).trigger('input');
+                $('#household_head_firstname').val(f).trigger('input');
+                $('#household_head_mi').val(m).trigger('input');
+                $('#household_head_suffix').val(sx).trigger('input');
+            }
+        });
 
         $(document).on('change', '#province', (e) => {
             this.householdData.province = e.target.value;
@@ -484,12 +1287,15 @@ class CensusFormBuilder {
         });
         $(document).on('change', '#address_unit', (e) => {
             this.householdData.address_unit = e.target.value;
+            this.scheduleSaveToSession();
         });
         $(document).on('change', '#address_house', (e) => {
             this.householdData.address_house = e.target.value;
+            this.scheduleSaveToSession();
         });
         $(document).on('change', '#address_street', (e) => {
             this.householdData.address_street = e.target.value;
+            this.scheduleSaveToSession();
         });
         $(document).on('change', '#interviewer_date', (e) => {
             this.householdData.interviewer_date = e.target.value;
@@ -501,6 +1307,7 @@ class CensusFormBuilder {
             const newCount = parseInt(e.target.value) || 1;
             this.householdData.total_members = newCount;
             this.setMemberCount(newCount);
+            this.scheduleSaveToSession();
         });
     }
 
@@ -560,15 +1367,16 @@ class CensusFormBuilder {
                     <div>
                         <div class="q-badge">S1.2</div>
                         <div class="q-title">Name of Respondent</div>
-                        <div class="q-hint">Surname, First Name, Middle Initial</div>
+                        <div class="q-hint">Surname, First Name, Middle Initial, Suffix</div>
                     </div>
                     <span class="q-required">Required</span>
                 </div>
                 <div class="q-members">
-                    <div class="member-row" style="display: grid; grid-template-columns: 1fr 1fr 80px; gap: 8px;">
+                    <div class="name-fields-row" style="display: grid; grid-template-columns: 3fr 3fr 1fr 1fr; gap: 8px;">
                         <input type="text" id="respondent_surname" class="q-input" placeholder="Surname" required>
                         <input type="text" id="respondent_firstname" class="q-input" placeholder="First Name" required>
                         <input type="text" id="respondent_mi" class="q-input" placeholder="M.I." maxlength="5">
+                        <input type="text" id="respondent_suffix" class="q-input" placeholder="Suffix" maxlength="10">
                     </div>
                 </div>
             </div>
@@ -579,15 +1387,21 @@ class CensusFormBuilder {
                     <div>
                         <div class="q-badge">S1.3</div>
                         <div class="q-title">Household Head</div>
-                        <div class="q-hint">Surname, First Name, Middle Initial</div>
+                        <div class="q-hint">Surname, First Name, Middle Initial, Suffix</div>
                     </div>
                     <span class="q-required">Required</span>
                 </div>
                 <div class="q-members">
-                    <div class="member-row" style="display: grid; grid-template-columns: 1fr 1fr 80px; gap: 8px;">
+                    <div class="member-row" style="margin-bottom: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500; color: #6A7F96; font-size: 13px;">
+                            <input type="checkbox" id="sameAsRespondent"> Same as Respondent
+                        </label>
+                    </div>
+                    <div class="name-fields-row" style="display: grid; grid-template-columns: 3fr 3fr 1fr 1fr; gap: 8px;">
                         <input type="text" id="household_head_surname" class="q-input" placeholder="Surname" required>
                         <input type="text" id="household_head_firstname" class="q-input" placeholder="First Name" required>
                         <input type="text" id="household_head_mi" class="q-input" placeholder="M.I." maxlength="5">
+                        <input type="text" id="household_head_suffix" class="q-input" placeholder="Suffix" maxlength="10">
                     </div>
                 </div>
             </div>
@@ -604,9 +1418,9 @@ class CensusFormBuilder {
                 </div>
                 <div class="q-members">
                     <div class="member-row">
-                        <select id="province" class="q-input" required>
+                        <select id="province" class="q-input" required disabled style="background: #F0F4F8; cursor: not-allowed;">
                             <option value="">Select province</option>
-                            <option value="NCR">National Capital Region (NCR)</option>
+                            <option value="NCR" selected>National Capital Region (NCR)</option>
                             <option value="Abra">Abra</option>
                             <option value="Agusan del Norte">Agusan del Norte</option>
                             <option value="Agusan del Sur">Agusan del Sur</option>
@@ -699,13 +1513,13 @@ class CensusFormBuilder {
                     <div>
                         <div class="q-badge">S1.5</div>
                         <div class="q-title">City/Municipality</div>
-                        <div class="q-hint">Enter city or municipality name</div>
+                        <div class="q-hint">City or municipality name</div>
                     </div>
                     <span class="q-required">Required</span>
                 </div>
                 <div class="q-members">
                     <div class="member-row">
-                        <input type="text" id="city" class="q-input" placeholder="Enter city or municipality name" required>
+                        <input type="text" id="city" class="q-input" value="Caloocan City" readonly style="background: #F0F4F8; cursor: not-allowed;" required>
                     </div>
                 </div>
             </div>
@@ -722,9 +1536,12 @@ class CensusFormBuilder {
                 </div>
                 <div class="q-members">
                     <div class="member-row">
-                        <select id="barangay" class="q-input" required>
+                        <select id="barangay" class="q-input" required disabled style="background: #F0F4F8; cursor: not-allowed;">
                             <option value="">Select barangay</option>
-                            ${Array.from({length: 193}, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}
+                            ${Array.from({length: 193}, (_, i) => {
+                                const sel = (window.userBrgy && String(i + 1) === String(window.userBrgy)) ? ' selected' : '';
+                                return `<option value="${i + 1}"${sel}>${i + 1}</option>`;
+                            }).join('')}
                         </select>
                     </div>
                 </div>
@@ -764,7 +1581,7 @@ class CensusFormBuilder {
                 </div>
                 <div class="q-members">
                     <div class="member-row">
-                        <input type="text" class="q-input" value="${this.householdData.time_start}" readonly style="background: #F0F4F8; cursor: not-allowed;">
+                        <input type="datetime-local" id="time_start" class="q-input" value="${this.householdData.time_start}" readonly style="background: #F0F4F8; cursor: not-allowed;">
                     </div>
                 </div>
             </div>
@@ -775,18 +1592,19 @@ class CensusFormBuilder {
                     <div>
                         <div class="q-badge">S1.9</div>
                         <div class="q-title">Interviewer Information</div>
-                        <div class="q-hint">Surname, First Name, Middle Initial and date</div>
+                        <div class="q-hint">Surname, First Name, Middle Initial, Suffix and date</div>
                     </div>
                     <span class="q-required">Required</span>
                 </div>
                 <div class="q-members">
-                    <div class="member-row" style="display: grid; grid-template-columns: 1fr 1fr 80px; gap: 8px;">
-                        <input type="text" id="interviewer_surname" class="q-input" placeholder="Surname" required>
-                        <input type="text" id="interviewer_firstname" class="q-input" placeholder="First Name" required>
-                        <input type="text" id="interviewer_mi" class="q-input" placeholder="M.I." maxlength="5">
+                    <div class="name-fields-row" style="display: grid; grid-template-columns: 3fr 3fr 1fr 1fr; gap: 8px;">
+                        <input type="text" id="interviewer_surname" class="q-input" placeholder="Surname" value="${this.householdData.interviewer_surname}" readonly style="background: #F0F4F8; cursor: not-allowed;" required>
+                        <input type="text" id="interviewer_firstname" class="q-input" placeholder="First Name" value="${this.householdData.interviewer_firstname}" readonly style="background: #F0F4F8; cursor: not-allowed;" required>
+                        <input type="text" id="interviewer_mi" class="q-input" placeholder="M.I." value="${this.householdData.interviewer_mi}" maxlength="5" readonly style="background: #F0F4F8; cursor: not-allowed;">
+                        <input type="text" id="interviewer_suffix" class="q-input" placeholder="Suffix" value="${this.householdData.interviewer_suffix}" maxlength="10" readonly style="background: #F0F4F8; cursor: not-allowed;">
                     </div>
                     <div class="member-row">
-                        <input type="date" id="interviewer_date" class="q-input" required>
+                        <input type="datetime-local" id="interviewer_date" class="q-input" value="${this.householdData.interviewer_date}" readonly style="background: #F0F4F8; cursor: not-allowed;" required>
                     </div>
                 </div>
             </div>
@@ -797,18 +1615,19 @@ class CensusFormBuilder {
                     <div>
                         <div class="q-badge">S1.10</div>
                         <div class="q-title">Supervisor Information</div>
-                        <div class="q-hint">Surname, First Name, Middle Initial and date</div>
+                        <div class="q-hint">Surname, First Name, Middle Initial, Suffix and date</div>
                     </div>
                     <span class="q-required">Required</span>
                 </div>
                 <div class="q-members">
-                    <div class="member-row" style="display: grid; grid-template-columns: 1fr 1fr 80px; gap: 8px;">
-                        <input type="text" id="supervisor_surname" class="q-input" placeholder="Surname" required>
-                        <input type="text" id="supervisor_firstname" class="q-input" placeholder="First Name" required>
-                        <input type="text" id="supervisor_mi" class="q-input" placeholder="M.I." maxlength="5">
+                    <div class="name-fields-row" style="display: grid; grid-template-columns: 3fr 3fr 1fr 1fr; gap: 8px;">
+                        <input type="text" id="supervisor_surname" class="q-input" placeholder="Surname" value="${this.householdData.supervisor_surname}" readonly style="background: #F0F4F8; cursor: not-allowed;" required>
+                        <input type="text" id="supervisor_firstname" class="q-input" placeholder="First Name" value="${this.householdData.supervisor_firstname}" readonly style="background: #F0F4F8; cursor: not-allowed;" required>
+                        <input type="text" id="supervisor_mi" class="q-input" placeholder="M.I." value="${this.householdData.supervisor_mi}" maxlength="5" readonly style="background: #F0F4F8; cursor: not-allowed;">
+                        <input type="text" id="supervisor_suffix" class="q-input" placeholder="Suffix" value="${this.householdData.supervisor_suffix}" maxlength="10" readonly style="background: #F0F4F8; cursor: not-allowed;">
                     </div>
                     <div class="member-row">
-                        <input type="date" id="supervisor_date" class="q-input" required>
+                        <input type="datetime-local" id="supervisor_date" class="q-input" value="${this.householdData.supervisor_date}" readonly style="background: #F0F4F8; cursor: not-allowed;" required>
                     </div>
                 </div>
             </div>
@@ -827,7 +1646,7 @@ class CensusFormBuilder {
                         <input type="text" class="q-input" value="${this.householdData.encoder_name}" readonly style="background: #F0F4F8; cursor: not-allowed;">
                     </div>
                     <div class="member-row">
-                        <input type="text" class="q-input" value="${this.householdData.date_encoded}" readonly style="background: #F0F4F8; cursor: not-allowed;">
+                        <input type="datetime-local" class="q-input" value="${this.householdData.date_encoded}" readonly style="background: #F0F4F8; cursor: not-allowed;">
                     </div>
                 </div>
             </div>
@@ -864,7 +1683,6 @@ class CensusFormBuilder {
     }
 
     renderStep2() {
-        console.log('renderStep2 called');
         const html = `
             <div class="section-label">
                 <div class="dot"></div>
@@ -875,7 +1693,7 @@ class CensusFormBuilder {
 
             <!-- Navigation Buttons -->
             <div class="form-navigation" style="display: flex; gap: 12px; margin-top: 40px; justify-content: space-between;">
-                <button id="btnPrev" class="btn-prev" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
+                <button id="btnPrev" class="btn-prev" style="background: #fff; color: #2E78C9; border: 2px solid #2E78C9; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
                     <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Back
                 </button>
                 <button id="btnNext" class="btn-next" style="background: linear-gradient(135deg, var(--sky), #2E78C9); color: #fff; border: none; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
@@ -885,7 +1703,6 @@ class CensusFormBuilder {
         `;
         
         $('#step-2').html(html);
-        console.log('about to call renderQuestionsForStep for step 2');
         this.renderQuestionsForStep(2, 'Q1', 'Q14');
     }
 
@@ -900,11 +1717,11 @@ class CensusFormBuilder {
 
             <!-- Navigation Buttons -->
             <div class="form-navigation" style="display: flex; gap: 12px; margin-top: 40px; justify-content: space-between;">
-                <button id="btnPrev" class="btn-prev" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
+                <button id="btnPrev" class="btn-prev" style="background: #fff; color: #2E78C9; border: 2px solid #2E78C9; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
                     <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Back
                 </button>
-                <button id="btnSubmit" class="btn-submit" style="background: linear-gradient(135deg, var(--mint), #2DA897); color: #fff; border: none; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
-                    <i class="fas fa-check" style="margin-right: 8px;"></i> Submit
+                <button id="btnNext" class="btn-next" style="background: linear-gradient(135deg, var(--sky), #2E78C9); color: #fff; border: none; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
+                    <i class="fas fa-arrow-right" style="margin-right: 8px;"></i> Next: HEALTH & SOCIO-CIVIC
                 </button>
             </div>
         `;
@@ -913,90 +1730,214 @@ class CensusFormBuilder {
         this.renderQuestionsForStep(3, 'Q15', 'Q25');
     }
 
-
     renderStep4() {
         const html = `
             <div class="section-label">
                 <div class="dot"></div>
-                <h3>Step 4: (Coming Soon)</h3>
+                <h3>Step 4: HEALTH INSURANCE, DISABILITY, SOCIO-CIVIC & MIGRATION</h3>
             </div>
 
             <div id="questions-container"></div>
 
             <!-- Navigation Buttons -->
             <div class="form-navigation" style="display: flex; gap: 12px; margin-top: 40px; justify-content: space-between;">
-                <button id="btnPrev" class="btn-prev" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
+                <button id="btnPrev" class="btn-prev" style="background: #fff; color: #2E78C9; border: 2px solid #2E78C9; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
                     <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Back
                 </button>
                 <button id="btnNext" class="btn-next" style="background: linear-gradient(135deg, var(--sky), #2E78C9); color: #fff; border: none; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
-                    <i class="fas fa-arrow-right" style="margin-right: 8px;"></i> Next
+                    <i class="fas fa-arrow-right" style="margin-right: 8px;"></i> Next: MIGRATION, CTC & SKILLS
                 </button>
             </div>
         `;
         
         $('#step-4').html(html);
+        this.renderQuestionsForStep(4, 'Q26', 'Q36');
     }
 
     renderStep5() {
         const html = `
             <div class="section-label">
                 <div class="dot"></div>
-                <h3>Step 5: (Coming Soon)</h3>
+                <h3>Step 5: MIGRATION DETAILS, COMMUNITY TAX & SKILLS DEVELOPMENT</h3>
             </div>
 
             <div id="questions-container"></div>
 
             <!-- Navigation Buttons -->
             <div class="form-navigation" style="display: flex; gap: 12px; margin-top: 40px; justify-content: space-between;">
-                <button id="btnPrev" class="btn-prev" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
+                <button id="btnPrev" class="btn-prev" style="background: #fff; color: #2E78C9; border: 2px solid #2E78C9; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
                     <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Back
                 </button>
                 <button id="btnNext" class="btn-next" style="background: linear-gradient(135deg, var(--sky), #2E78C9); color: #fff; border: none; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
-                    <i class="fas fa-arrow-right" style="margin-right: 8px;"></i> Next
+                    <i class="fas fa-arrow-right" style="margin-right: 8px;"></i> Next: HOUSEHOLD QUESTIONS
                 </button>
             </div>
         `;
         
         $('#step-5').html(html);
+        this.renderQuestionsForStep(5, 'Q37', 'Q44');
     }
 
     renderStep6() {
         const html = `
             <div class="section-label">
                 <div class="dot"></div>
-                <h3>Step 6: (Coming Soon)</h3>
+                <h3>Step 6: QUESTIONS FOR THE HOUSEHOLD</h3>
             </div>
 
-            <div id="questions-container"></div>
+            <div id="household-questions-container"></div>
 
             <!-- Navigation Buttons -->
             <div class="form-navigation" style="display: flex; gap: 12px; margin-top: 40px; justify-content: space-between;">
-                <button id="btnPrev" class="btn-prev" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
+                <button id="btnPrev" class="btn-prev" style="background: #fff; color: #2DA897; border: 2px solid #2DA897; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
                     <i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Back
                 </button>
                 <button id="btnSubmit" class="btn-submit" style="background: linear-gradient(135deg, var(--mint), #2DA897); color: #fff; border: none; padding: 12px 28px; border-radius: 100px; cursor: pointer; font-weight: 600; font-size: 15px;">
-                    <i class="fas fa-check" style="margin-right: 8px;"></i> Submit
+                    <i class="fas fa-check" style="margin-right: 8px;"></i> Submit RBIM Entry
                 </button>
             </div>
         `;
         
         $('#step-6').html(html);
+        this.renderHouseholdQuestions();
+    }
+
+    renderHouseholdQuestions() {
+        const container = $('#step-6 #household-questions-container');
+        container.html('');
+
+        this.HOUSEHOLD_QUESTIONS.forEach((q, qi) => {
+            const val = this.householdQuestionsData[q.id] || '';
+
+            // Check showIf condition for conditional display
+            let visible = true;
+            if (q.showIf) {
+                const parentVal = this.householdQuestionsData[q.showIf.id] || '';
+                if (typeof q.showIf.val === 'function') {
+                    visible = q.showIf.val(parentVal);
+                } else {
+                    visible = parentVal === q.showIf.val;
+                }
+            }
+
+            const card = document.createElement('div');
+            card.className = 'q-card';
+            card.id = `card_${q.id}`;
+            card.style.animationDelay = (qi * 0.04) + 's';
+            card.style.display = visible ? '' : 'none';
+
+            const header = `
+                <div class="q-card-header">
+                    <div>
+                        ${q.badge ? `<div class="q-badge">${q.badge}</div>` : ''}
+                        <div class="q-title">${q.label}</div>
+                        <div class="q-hint">${q.hint}</div>
+                    </div>
+                </div>
+            `;
+
+            const membersDiv = document.createElement('div');
+            membersDiv.className = 'q-members';
+
+            const row = document.createElement('div');
+            row.className = 'member-row';
+
+            let input = null;
+
+            if (q.type === 'select') {
+                input = document.createElement('select');
+                input.className = 'q-input' + (val ? ' has-val' : '');
+                const emptyOpt = document.createElement('option');
+                emptyOpt.value = '';
+                emptyOpt.textContent = 'Select...';
+                input.appendChild(emptyOpt);
+                q.options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.textContent = opt;
+                    if (val === opt) option.selected = true;
+                    input.appendChild(option);
+                });
+                input.addEventListener('change', (e) => {
+                    this.householdQuestionsData[q.id] = e.target.value;
+                    e.target.classList.toggle('has-val', !!e.target.value);
+                    this.scheduleSaveToSession();
+                    // Show/hide dependent "specify others" fields
+                    this.HOUSEHOLD_QUESTIONS.forEach(dq => {
+                        if (dq.showIf && dq.showIf.id === q.id) {
+                            const depCard = document.getElementById(`card_${dq.id}`);
+                            if (depCard) {
+                                const depParentVal = this.householdQuestionsData[dq.showIf.id] || '';
+                                let depVisible = false;
+                                if (typeof dq.showIf.val === 'function') {
+                                    depVisible = dq.showIf.val(depParentVal);
+                                } else {
+                                    depVisible = depParentVal === dq.showIf.val;
+                                }
+                                depCard.style.display = depVisible ? '' : 'none';
+                                if (!depVisible) {
+                                    this.householdQuestionsData[dq.id] = '';
+                                    const depInput = depCard.querySelector('.q-input');
+                                    if (depInput) {
+                                        depInput.value = '';
+                                        depInput.classList.remove('has-val');
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            } else {
+                input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'q-input' + (val ? ' has-val' : '');
+                input.placeholder = q.placeholder || '';
+                input.value = val;
+                input.addEventListener('input', (e) => {
+                    this.householdQuestionsData[q.id] = e.target.value;
+                    e.target.classList.toggle('has-val', !!e.target.value);
+                    this.scheduleSaveToSession();
+                });
+            }
+
+            row.appendChild(input);
+            membersDiv.appendChild(row);
+
+            card.innerHTML = header;
+            card.appendChild(membersDiv);
+            container.append(card);
+        });
     }
 
     renderQuestionsForStep(step, startQ, endQ) {
         const container = $(`#step-${step} #questions-container`);
-        console.log('renderQuestionsForStep called:', { step, startQ, endQ, containerFound: container.length > 0 });
         container.html('');
         
         // Get question IDs in range
         const questionIds = {};
-        questionIds['Q1'] = 1; questionIds['Q2'] = 2; questionIds['Q3'] = 3; questionIds['Q4'] = 4;
+        questionIds['Q1'] = 1; questionIds['Q2'] = 2; questionIds['Q2_others'] = 2.1; questionIds['Q3'] = 3; questionIds['Q4'] = 4;
         questionIds['Q5'] = 5; questionIds['Q6'] = 6; questionIds['Q7'] = 7; questionIds['Q7b'] = 7.5;
         questionIds['Q8'] = 8; questionIds['Q9'] = 9; questionIds['Q10'] = 10; questionIds['Q11'] = 11;
         questionIds['Q12'] = 12; questionIds['Q13'] = 13; questionIds['Q14'] = 14; questionIds['Q15'] = 15;
-        questionIds['Q16'] = 16; questionIds['Q17'] = 17; questionIds['Q18'] = 18; questionIds['Q19'] = 19;
-        questionIds['Q20'] = 20; questionIds['Q21'] = 21; questionIds['Q22'] = 22; questionIds['Q23'] = 23;
-        questionIds['Q24'] = 24; questionIds['Q25'] = 25;
+        questionIds['Q16'] = 16; questionIds['Q16_others'] = 16.1; questionIds['Q17'] = 17; questionIds['Q18'] = 18;
+        questionIds['Q19'] = 19; questionIds['Q19_others'] = 19.1; questionIds['Q20'] = 20; questionIds['Q20_others'] = 20.1;
+        questionIds['Q21'] = 21; questionIds['Q22'] = 22; questionIds['Q23'] = 23; questionIds['Q24'] = 24;
+        questionIds['Q24_others'] = 24.1; questionIds['Q25'] = 25;
+        questionIds['Q26'] = 26; questionIds['Q26_others'] = 26.1; questionIds['Q27'] = 27; questionIds['Q27_others'] = 27.1;
+        questionIds['Q28'] = 28; questionIds['Q28_others'] = 28.1; questionIds['Q29'] = 29;
+        questionIds['Q30'] = 30; questionIds['Q31'] = 31; questionIds['Q32'] = 32;
+        questionIds['Q33'] = 33; questionIds['Q34'] = 34; questionIds['Q35'] = 35; questionIds['Q36'] = 36;
+        questionIds['Q37'] = 37;
+        questionIds['Q38a'] = 38.1; questionIds['Q38a_others'] = 38.11;
+        questionIds['Q38b'] = 38.2; questionIds['Q38b_others'] = 38.21;
+        questionIds['Q38c'] = 38.3; questionIds['Q38c_others'] = 38.31;
+        questionIds['Q39a'] = 39.1; questionIds['Q39b'] = 39.2;
+        questionIds['Q40a'] = 40.1; questionIds['Q40a_others'] = 40.11;
+        questionIds['Q40b'] = 40.2; questionIds['Q40b_others'] = 40.21;
+        questionIds['Q40c'] = 40.3; questionIds['Q40c_others'] = 40.31;
+        questionIds['Q41a'] = 41.1; questionIds['Q41b'] = 41.2;
+        questionIds['Q42a'] = 42.1; questionIds['Q42b'] = 42.2;
+        questionIds['Q43'] = 43; questionIds['Q44'] = 44; questionIds['Q44_others'] = 44.1;
         
         const startNum = questionIds[startQ];
         const endNum = questionIds[endQ];
@@ -1034,7 +1975,6 @@ class CensusFormBuilder {
             this.renderMemberRowsForStep(q, step);
         });
         
-        console.log('renderQuestionsForStep completed:', { step, startQ, endQ, questionsRendered });
     }
 
     renderMemberRowsForStep(q, step) {
@@ -1137,7 +2077,8 @@ class CensusFormBuilder {
                 const suffix = (this.memberData[mi] || {})['Q1_suffix'] || '';
 
                 const nameContainer = document.createElement('div');
-                nameContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 60px 70px; gap: 6px; flex: 1;';
+                nameContainer.className = 'name-fields-row';
+                nameContainer.style.cssText = 'display: grid; grid-template-columns: 3fr 3fr 1fr 1fr; gap: 6px; flex: 1;';
 
                 const surnameInput = document.createElement('input');
                 surnameInput.type = 'text';
@@ -1226,12 +2167,15 @@ class CensusFormBuilder {
                 dobContainer.appendChild(ageDisplay);
                 row.appendChild(dobContainer);
             }
-            else if (q.type === 'text' || q.type === 'number') {
+            else if (q.type === 'text' || q.type === 'number' || q.type === 'date' || q.type === 'datetime-local') {
                 input = document.createElement('input');
                 input.type = q.type;
                 input.className = 'q-input' + (val ? ' has-val' : '');
                 input.placeholder = q.placeholder || '';
                 input.value = val;
+                if (q.type === 'datetime-local') {
+                    input.step = '60';
+                }
 
                 input.addEventListener('input', (e) => {
                     this.setMemberVal(mi, q.id, e.target.value);
@@ -1254,6 +2198,13 @@ class CensusFormBuilder {
             } else if (q.type === 'select') {
                 input = document.createElement('select');
                 input.className = 'q-input' + (val ? ' has-val' : '');
+
+                // Scroll into view when focused so dropdown doesn't get cut off
+                input.addEventListener('focus', (e) => {
+                    setTimeout(() => {
+                        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                });
 
                 const emptyOpt = document.createElement('option');
                 emptyOpt.value = '';
@@ -1281,10 +2232,11 @@ class CensusFormBuilder {
 
                     // Refresh Q13/Q14 when Q12 changes
                     if (q.id === 'Q12') {
-                        ['Q13', 'Q14'].forEach(qId => {
-                            const dq = this.QUESTIONS.find(quest => quest.id === qId);
-                            if (dq) this.renderMemberRowsForStep(dq, step);
-                        });
+                        // If Q12 is not Yes, clear Q13/Q14 data for this member
+                        if (e.target.value !== 'Yes, public' && e.target.value !== 'Yes, private') {
+                            this.setMemberVal(mi, 'Q13', '');
+                            this.setMemberVal(mi, 'Q14', '');
+                        }
                     }
                     // Refresh Q17-Q18 when Q16 changes
                     if (q.id === 'Q16') {
@@ -1351,13 +2303,13 @@ class CensusFormBuilder {
     }
 
     isMemberEnabledForQuestion(q, mi) {
-        if (!this.isVisible(q, mi)) return false;
-
+        // Check sex requirement first
         if (this.sexRequirements && this.sexRequirements[q.id]) {
             const sex = (this.memberData[mi] || {})['Q3'];
             if (sex !== this.sexRequirements[q.id]) return false;
         }
 
+        // Check age requirement
         const age = (this.memberData[mi] || {})['Q4'];
         if (this.ageRequirements[q.id]) {
             // If age is not yet computed (no DOB), hide age-dependent questions
@@ -1365,10 +2317,8 @@ class CensusFormBuilder {
             if (!this.ageRequirements[q.id](age)) return false;
         }
 
-        if (['Q13', 'Q14'].includes(q.id)) {
-            const q12Val = (this.memberData[mi] || {})['Q12'];
-            if (q12Val !== 'Yes, public' && q12Val !== 'Yes, private') return false;
-        }
+        // Check showIf visibility (per-member)
+        if (!this.isVisible(q, mi)) return false;
 
         return true;
     }
@@ -1397,33 +2347,8 @@ class CensusFormBuilder {
     
 
     isFieldEnabled(q, memberIdx) {
-        // Check if field should be enabled based on age requirements and visibility
-        if (!this.isVisible(q, memberIdx)) return false;
-        
-        // Check sex requirement
-        if (this.sexRequirements && this.sexRequirements[q.id]) {
-            const sex = (this.memberData[memberIdx] || {})['Q3'];
-            if (sex !== this.sexRequirements[q.id]) return false;
-        }
-        
-        // Check age requirement
-        const age = (this.memberData[memberIdx] || {})['Q4'];
-        if (this.ageRequirements[q.id]) {
-            if (age === '' || age === undefined || age === null) return false;
-            if (!this.ageRequirements[q.id](age)) {
-                return false;
-            }
-        }
-        
-        // Check if Q13 or Q14 should be disabled based on Q12's value
-        if (['Q13', 'Q14'].includes(q.id)) {
-            const q12Val = (this.memberData[memberIdx] || {})['Q12'];
-            if (q12Val !== 'Yes, public' && q12Val !== 'Yes, private') {
-                return false;
-            }
-        }
-        
-        return true;
+        // Delegate to isMemberEnabledForQuestion for consistent logic
+        return this.isMemberEnabledForQuestion(q, memberIdx);
     }
 
     shouldRequireField(q, memberIdx) {
@@ -1456,6 +2381,7 @@ class CensusFormBuilder {
         }
         this.memberData[memberIdx][questionId] = value;
         this.updateProgress();
+        this.scheduleSaveToSession();
     }
 
     refreshMemberLabels() {
@@ -1502,6 +2428,10 @@ class CensusFormBuilder {
             this.renderStep2();
         } else if (this.currentStep === 3) {
             this.renderStep3();
+        } else if (this.currentStep === 4) {
+            this.renderStep4();
+        } else if (this.currentStep === 5) {
+            this.renderStep5();
         }
     }
 
@@ -1519,9 +2449,24 @@ class CensusFormBuilder {
 
     nextStep() {
         // Validate current step
-        console.log('nextStep called, currentStep:', this.currentStep);
         if (!this.validateStep(this.currentStep)) {
             return;
+        }
+
+        // When leaving Step 1, auto-fill Member 1 with Household Head name and set Q2 to "Head"
+        if (this.currentStep === 1) {
+            const hhSurname = this.householdData.household_head_surname || '';
+            const hhFirstname = this.householdData.household_head_firstname || '';
+            const hhMI = this.householdData.household_head_mi || '';
+            const hhSuffix = this.householdData.household_head_suffix || '';
+            const composed = [hhSurname, hhFirstname, hhMI ? hhMI + '.' : '', hhSuffix].filter(Boolean).join(', ').replace(/,\s*$/, '');
+            this.memberData[0] = this.memberData[0] || {};
+            this.memberData[0]['Q1'] = composed;
+            this.memberData[0]['Q1_surname'] = hhSurname;
+            this.memberData[0]['Q1_firstname'] = hhFirstname;
+            this.memberData[0]['Q1_mi'] = hhMI;
+            this.memberData[0]['Q1_suffix'] = hhSuffix;
+            this.memberData[0]['Q2'] = 'Head';
         }
 
         if (this.currentStep < this.totalSteps) {
@@ -1538,18 +2483,15 @@ class CensusFormBuilder {
     }
 
     updateStepDisplay() {
-        console.log('updateStepDisplay called, currentStep:', this.currentStep);
         $('.form-step').removeClass('active');
         $(`#step-${this.currentStep}`).addClass('active');
 
         // Show toolbar and render appropriate step
         if (this.currentStep === 2) {
-            console.log('Rendering Step 2');
             $('#toolbar').show();
             $('#memberCount').text(this.memberCount);
             this.renderStep2();
         } else if (this.currentStep === 3) {
-            console.log('Rendering Step 3');
             $('#toolbar').show();
             $('#memberCount').text(this.memberCount);
             this.renderStep3();
@@ -1562,8 +2504,7 @@ class CensusFormBuilder {
             $('#memberCount').text(this.memberCount);
             this.renderStep5();
         } else if (this.currentStep === 6) {
-            $('#toolbar').show();
-            $('#memberCount').text(this.memberCount);
+            $('#toolbar').hide();
             this.renderStep6();
         } else {
             $('#toolbar').hide();
@@ -1574,7 +2515,34 @@ class CensusFormBuilder {
         // Scroll to top
         setTimeout(() => {
             $('.form-body').scrollTop(0);
+            this.focusFirstQuestionField();
         }, 100);
+    }
+
+    focusFirstQuestionField() {
+        const stepContainer = $(`#step-${this.currentStep}`);
+        if (!stepContainer.length) return;
+
+        const firstCard = stepContainer.find('.q-card:visible').first();
+        if (!firstCard.length) return;
+
+        let target = firstCard
+            .find('input.q-input:visible:not([readonly]):not([disabled]), select.q-input:visible:not([disabled]), textarea.q-input:visible:not([readonly]):not([disabled])')
+            .first();
+
+        if (!target.length) {
+            target = firstCard.find('.radio-btn:visible:not([disabled])').first();
+        }
+
+        if (!target.length) return;
+
+        target.trigger('focus');
+
+        const el = target.get(0);
+        if (el && typeof el.setSelectionRange === 'function') {
+            const len = el.value ? el.value.length : 0;
+            el.setSelectionRange(len, len);
+        }
     }
 
     validateStep(step) {
@@ -1616,7 +2584,7 @@ class CensusFormBuilder {
             return true;
         } else if (step === 2) {
             // Validate Step 2: Q1-Q14 (skip Q4 - auto-computed)
-            const questionIds = ['Q1', 'Q2', 'Q3', 'Q5', 'Q6', 'Q7', 'Q7b', 'Q8', 'Q9', 'Q10', 'Q11', 'Q12', 'Q13', 'Q14'];
+            const questionIds = ['Q1', 'Q2', 'Q2_others', 'Q3', 'Q5', 'Q6', 'Q7', 'Q7b', 'Q8', 'Q9', 'Q10', 'Q11', 'Q12', 'Q13', 'Q14'];
             for (let mi = 0; mi < this.memberCount; mi++) {
                 // Validate Q1 sub-fields specifically
                 const surname = (this.memberData[mi] || {})['Q1_surname'] || '';
@@ -1742,19 +2710,19 @@ class CensusFormBuilder {
         // Update form step display button area
         $('#formStepText, #formStepDisplay').text('Step ' + this.currentStep + ' of ' + this.totalSteps);
         
-        if (this.currentStep === 1) {
-            $('#progressLabel').text('IDENTIFICATION');
-        } else if (this.currentStep === 2) {
-            $('#progressLabel').text('DEMOGRAPHIC CHARACTERISTICS');
-        } else if (this.currentStep === 3) {
-            $('#progressLabel').text('ECONOMIC ACTIVITY & HEALTH INFORMATION');
-        } else {
-            $('#progressLabel').text('Step ' + this.currentStep);
-        }
+        const labels = {
+            1: 'IDENTIFICATION',
+            2: 'DEMOGRAPHIC CHARACTERISTICS',
+            3: 'ECONOMIC ACTIVITY & HEALTH INFORMATION',
+            4: 'HEALTH INSURANCE, DISABILITY & SOCIO-CIVIC',
+            5: 'MIGRATION, CTC & SKILLS DEVELOPMENT',
+            6: 'QUESTIONS FOR THE HOUSEHOLD'
+        };
+        $('#progressLabel').text(labels[this.currentStep] || 'Step ' + this.currentStep);
     }
 
     submitForm() {
-        if (!this.validateStep(3)) {
+        if (!this.validateStep(this.currentStep)) {
             return;
         }
 
@@ -1763,7 +2731,8 @@ class CensusFormBuilder {
 
         const formData = {
             household: this.householdData,
-            members: this.memberData
+            members: this.getNormalizedMemberData(),
+            householdQuestions: this.getNormalizedHouseholdQuestionsData()
         };
 
         $.ajax({
@@ -1777,11 +2746,12 @@ class CensusFormBuilder {
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
-                        text: 'Census entry has been submitted successfully.',
+                        text: 'RBIM entry has been submitted successfully.',
                         confirmButtonColor: '#2caf33',
                         confirmButtonText: 'OK',
                         allowOutsideClick: false
                     }).then(() => {
+                        this.clearFormSession();
                         location.reload();
                     });
                 } else {
@@ -1814,6 +2784,75 @@ class CensusFormBuilder {
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         return `${hours}:${minutes}`;
+    }
+
+    getNowDateTimeLocal() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    getNormalizedMemberData() {
+        const otherSpecs = {
+            Q2: 'Other Relative',
+            Q16: 'Others',
+            Q19: 'Others',
+            Q20: 'Others',
+            Q24: 'Other',
+            Q26: 'Others',
+            Q27: 'Other facility',
+            Q28: 'Other reason',
+            Q38a: 'Others',
+            Q38b: 'Others',
+            Q38c: 'Others',
+            Q40a: 'Others',
+            Q40b: 'Others',
+            Q40c: 'Others',
+            Q44: 'Others'
+        };
+
+        return this.memberData.map((member = {}) => {
+            const out = { ...member };
+            Object.keys(otherSpecs).forEach((qId) => {
+                const selected = (out[qId] || '').trim();
+                const otherKey = `${qId}_others`;
+                const otherValue = (out[otherKey] || '').trim();
+                if (selected === otherSpecs[qId]) {
+                    out[qId] = otherValue;
+                }
+                delete out[otherKey];
+            });
+            return out;
+        });
+    }
+
+    getNormalizedHouseholdQuestionsData() {
+        const out = { ...this.householdQuestionsData };
+        const otherSpecs = {
+            Q47: 'Others',
+            Q48: 'Others',
+            Q49: 'Others',
+            Q50a: 'Others',
+            Q51: 'Others',
+            Q52: 'Other housing units (boat, cave, others)',
+            Q53: 'Others'
+        };
+
+        Object.keys(otherSpecs).forEach((qId) => {
+            const selected = (out[qId] || '').trim();
+            const otherKey = `${qId}_others`;
+            const otherValue = (out[otherKey] || '').trim();
+            if (selected === otherSpecs[qId]) {
+                out[qId] = otherValue;
+            }
+            delete out[otherKey];
+        });
+
+        return out;
     }
 
     getTodayDate() {
@@ -1856,6 +2895,65 @@ class CensusFormBuilder {
             html += `<option value="${i}">${i}</option>`;
         }
         citySelect.html(html);
+    }
+
+    // ── Session persistence ──────────────────────────────────────────────────
+
+    scheduleSaveToSession() {
+        // Debounce: wait 800 ms after the last change before saving
+        if (this._saveTimer) clearTimeout(this._saveTimer);
+        this._saveTimer = setTimeout(() => this.saveToSession(), 800);
+    }
+
+    saveToSession() {
+        const payload = {
+            householdData:          this.householdData,
+            memberData:             this.memberData,
+            householdQuestionsData: this.householdQuestionsData,
+            currentStep:            this.currentStep,
+            memberCount:            this.memberCount
+        };
+        $.ajax({
+            url:         '../assets/php/save_form_session.php',
+            type:        'POST',
+            contentType: 'application/json',
+            data:        JSON.stringify(payload),
+            dataType:    'json'
+        });
+    }
+
+    loadFromSession(callback) {
+        $.ajax({
+            url:      '../assets/php/get_form_session.php',
+            type:     'GET',
+            dataType: 'json',
+            success: (response) => {
+                if (response.status === 'success' && response.draft) {
+                    const d = response.draft;
+                    if (d.householdData)          Object.assign(this.householdData, d.householdData);
+                    if (d.memberData)              this.memberData = d.memberData;
+                    if (d.householdQuestionsData)  this.householdQuestionsData = d.householdQuestionsData;
+                    if (d.memberCount)  {
+                        this.memberCount = parseInt(d.memberCount) || 1;
+                        this.householdData.total_members = this.memberCount;
+                    }
+                    // Restore step but always start on Step 1 so the user can review
+                    this.currentStep = 1;
+                }
+                if (typeof callback === 'function') callback();
+            },
+            error: () => {
+                if (typeof callback === 'function') callback();
+            }
+        });
+    }
+
+    clearFormSession() {
+        $.ajax({
+            url:      '../assets/php/clear_form_session.php',
+            type:     'POST',
+            dataType: 'json'
+        });
     }
 }
 

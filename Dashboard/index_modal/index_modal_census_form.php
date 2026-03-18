@@ -1,5 +1,5 @@
 <?php
-// Census Form: Modern multi-step census data entry form
+// RBIM Form: Modern multi-step registry data entry form
 ?>
 
 <style>
@@ -193,7 +193,7 @@
   border-radius: 22px;
   box-shadow: var(--shadow);
   margin-bottom: 18px;
-  overflow: hidden;
+  overflow: visible;
   transition: box-shadow 0.25s;
 }
 
@@ -202,6 +202,8 @@
 }
 
 .q-card-header {
+  border-radius: 22px 22px 0 0;
+
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -391,6 +393,14 @@ select.q-input {
   box-shadow: 0 0 0 3px rgba(74,144,217,0.1);
 }
 
+.name-fields-row {
+  padding: 13px 0;
+}
+
+.name-fields-row .q-input {
+  min-width: 0;
+}
+
 @media (max-width: 560px) {
   .q-card-header, .q-members {
     padding-left: 16px;
@@ -401,6 +411,10 @@ select.q-input {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+
+  .name-fields-row {
+    grid-template-columns: 1fr 1fr 1fr 1fr !important;
   }
   
   .member-label {
@@ -415,6 +429,12 @@ select.q-input {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 400px) {
+  .name-fields-row {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
 </style>
 
 <div id="censusFormModal" style="display: none;">
@@ -424,7 +444,7 @@ select.q-input {
     </button>
     
     <div class="form-header">
-        <h2>Household Census Entry</h2>
+        <h2>Registry of Barangay Inhabitants and Migrants</h2>
         <p>Demographic Characteristics Survey</p>
         <div class="form-progress">
             <div class="form-progress-bar" id="progressBar" style="width: 0%;"></div>

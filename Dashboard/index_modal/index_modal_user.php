@@ -83,12 +83,12 @@
               </div>
             </div>
             <div class="col-md-6 mb-3">
-              <label for="barangay">Barangay</label>
+              <label for="userBarangay">Barangay</label>
               <div class="input-group">
                 <div class="input-group-prepend">
                   <span class="input-group-text"><i class="fa fa-map-marker"></i></span>
                 </div>
-                <select class="form-control" id="barangay">
+                <select class="form-control" id="userBarangay">
                   <option value="">Select Barangay</option>
                   <?php for ($i = 1; $i <= 193; $i++): ?>
                     <option value="<?php echo $i; ?>">Barangay <?php echo $i; ?></option>

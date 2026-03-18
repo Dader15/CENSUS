@@ -13,7 +13,7 @@ if (!isset($_SESSION['UID'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Census Analytics Dashboard</title>
+    <title>RBIM Analytics Dashboard</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="../assets/css/census_ui.css" rel="stylesheet">
@@ -27,7 +27,7 @@ if (!isset($_SESSION['UID'])) {
                 <div class="user-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                     <i class="fas fa-chart-bar"></i>
                 </div>
-                <span>CENSUS</span>
+                <span>RBIM</span>
             </div>
 
             <nav class="sidebar-nav">
@@ -59,7 +59,10 @@ if (!isset($_SESSION['UID'])) {
                     <div class="user-details">
                         <p><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Guest'); ?></p>
                         <small><?php echo htmlspecialchars($_SESSION['position'] ?? 'User'); ?></small>
-                        
+                        <div id="sidebarInterviewerInfo" style="margin-top: 6px; font-size: 11px; color: #ccc; display: none;">
+                            <div><i class="fas fa-user-tie" style="width: 14px;"></i> <span id="sidebarInterviewerName"></span></div>
+                            <div><i class="fas fa-user-shield" style="width: 14px;"></i> <span id="sidebarSupervisorName"></span></div>
+                        </div>
                     </div>
                 </div>
                 <button class="logout-btn" id="submitLogout" title="Logout">
@@ -98,8 +101,8 @@ if (!isset($_SESSION['UID'])) {
                 <!-- Content Header -->
                 <div class="content-header" id="contentHeader">
                     <div class="header-info">
-                        <h1>Census Data</h1>
-                        <p>Manage and track census entries across all barangays of Caloocan City</p>
+                        <h1>RBIM Data</h1>
+                        <p>Manage and track registry entries across all barangays of Caloocan City</p>
                     </div>
                     <button class="btn btn-primary btn-lg" id="createNewBtn">
                         <i class="fas fa-plus"></i>
@@ -225,7 +228,7 @@ if (!isset($_SESSION['UID'])) {
                     <!-- Table Panel -->
                     <div class="table-panel">
                         <div class="table-title">
-                            <h3>Census Records</h3>
+                            <h3>RBIM Records</h3>
                             <span class="entry-count" id="recordCount">0 entries</span>
                         </div>
 
@@ -250,7 +253,7 @@ if (!isset($_SESSION['UID'])) {
                             <div class="empty-state" id="emptyState" style="display: none;">
                                 <div class="empty-placeholder">
                                     <i class="fas fa-inbox"></i>
-                                    <p>No census records found</p>
+                                    <p>No RBIM records found</p>
                                     <small>Try adjusting your filters or create a new entry</small>
                                 </div>
                             </div>
@@ -285,6 +288,7 @@ if (!isset($_SESSION['UID'])) {
     <?php include 'index_modal/index_modal_changepass.php'; ?>
     <?php include 'index_modal/index_modal_change_user_password.php'; ?>
     <?php include 'index_modal/index_modal_initial_password_change.php'; ?>
+    <?php include 'index_modal/index_modal_interviewer_supervisor.php'; ?>
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -299,15 +303,111 @@ if (!isset($_SESSION['UID'])) {
         window.currentUserName = "<?php echo isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name']) : 'User'; ?>";
         window.changedPassword = <?php echo isset($_SESSION['changedpassword']) ? intval($_SESSION['changedpassword']) : '1'; ?>;
         
-        // Set encoder name for form
+        // Set encoder name and user barangay for form
         document.body.dataset.encoderName = "<?php echo isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name']) : 'User'; ?>";
+        window.userBrgy = "<?php echo isset($_SESSION['brgy']) ? htmlspecialchars($_SESSION['brgy']) : ''; ?>";
+
+        // Load interviewer/supervisor data from session (persisted across page reloads)
+        <?php if (!empty($_SESSION['interviewer_surname'])): ?>
+        window.interviewerData = {
+            surname: "<?php echo htmlspecialchars($_SESSION['interviewer_surname'] ?? ''); ?>",
+            firstname: "<?php echo htmlspecialchars($_SESSION['interviewer_firstname'] ?? ''); ?>",
+            mi: "<?php echo htmlspecialchars($_SESSION['interviewer_mi'] ?? ''); ?>",
+            suffix: "<?php echo htmlspecialchars($_SESSION['interviewer_suffix'] ?? ''); ?>"
+        };
+        <?php endif; ?>
+        <?php if (!empty($_SESSION['supervisor_surname'])): ?>
+        window.supervisorData = {
+            surname: "<?php echo htmlspecialchars($_SESSION['supervisor_surname'] ?? ''); ?>",
+            firstname: "<?php echo htmlspecialchars($_SESSION['supervisor_firstname'] ?? ''); ?>",
+            mi: "<?php echo htmlspecialchars($_SESSION['supervisor_mi'] ?? ''); ?>",
+            suffix: "<?php echo htmlspecialchars($_SESSION['supervisor_suffix'] ?? ''); ?>"
+        };
+        <?php endif; ?>
         
         $(document).ready(function() {
+            // Pre-fill interviewer/supervisor modal if session data exists
+            if (window.interviewerData) {
+                $('#isInterviewerSurname').val(window.interviewerData.surname);
+                $('#isInterviewerFirstname').val(window.interviewerData.firstname);
+                $('#isInterviewerMI').val(window.interviewerData.mi);
+                $('#isInterviewerSuffix').val(window.interviewerData.suffix);
+            }
+            if (window.supervisorData) {
+                $('#isSupervisorSurname').val(window.supervisorData.surname);
+                $('#isSupervisorFirstname').val(window.supervisorData.firstname);
+                $('#isSupervisorMI').val(window.supervisorData.mi);
+                $('#isSupervisorSuffix').val(window.supervisorData.suffix);
+            }
+
             // Show initial password change modal if user needs to change password
             if (window.changedPassword == 0) {
                 let initialPasswordModal = new bootstrap.Modal(document.getElementById('initialPasswordChangeModal'));
                 initialPasswordModal.show();
+            } else {
+                // Only show interviewer/supervisor prompt if no session data exists
+                if (!window.interviewerData || !window.supervisorData) {
+                    showInterviewerSupervisorModal();
+                } else {
+                    updateSidebarNames();
+                }
             }
+
+            // Handle Interviewer/Supervisor modal save
+            $('#saveInterviewerSupervisorBtn').on('click', function() {
+                const iSurname = $('#isInterviewerSurname').val().trim();
+                const iFirstname = $('#isInterviewerFirstname').val().trim();
+                const sSurname = $('#isSupervisorSurname').val().trim();
+                const sFirstname = $('#isSupervisorFirstname').val().trim();
+
+                if (!iSurname || !iFirstname) {
+                    Swal.fire({ icon: 'warning', title: 'Missing Information', text: 'Please fill in the Interviewer Surname and First Name.', confirmButtonColor: '#2caf33' });
+                    return;
+                }
+                if (!sSurname || !sFirstname) {
+                    Swal.fire({ icon: 'warning', title: 'Missing Information', text: 'Please fill in the Supervisor Surname and First Name.', confirmButtonColor: '#2caf33' });
+                    return;
+                }
+
+                // Store in window variables for census form auto-fill
+                window.interviewerData = {
+                    surname: iSurname,
+                    firstname: iFirstname,
+                    mi: $('#isInterviewerMI').val().trim(),
+                    suffix: $('#isInterviewerSuffix').val().trim()
+                };
+                window.supervisorData = {
+                    surname: sSurname,
+                    firstname: sFirstname,
+                    mi: $('#isSupervisorMI').val().trim(),
+                    suffix: $('#isSupervisorSuffix').val().trim()
+                };
+
+                // Save to PHP session so data persists across page reloads
+                fetch('../assets/php/save_interviewer_supervisor.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        interviewer: window.interviewerData,
+                        supervisor: window.supervisorData
+                    })
+                }).catch(err => console.error('Failed to save interviewer/supervisor to session:', err));
+
+                // Update sidebar display
+                updateSidebarNames();
+
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('interviewerSupervisorModal')).hide();
+            });
+
+            // After initial password change succeeds, show interviewer/supervisor modal
+            $(document).on('initialPasswordChanged', function() {
+                if (!window.interviewerData || !window.supervisorData) {
+                    showInterviewerSupervisorModal();
+                } else {
+                    updateSidebarNames();
+                }
+            });
             
             // Create New Entry button handler
             $('#createNewBtn').on('click', function() {
@@ -343,6 +443,25 @@ if (!isset($_SESSION['UID'])) {
             
             // Re-enable create button
             $('#createNewBtn').prop('disabled', false).css('opacity', '1');
+        }
+
+        function showInterviewerSupervisorModal() {
+            // If session data already loaded, update sidebar immediately
+            if (window.interviewerData && window.supervisorData) {
+                updateSidebarNames();
+            }
+            let isModal = new bootstrap.Modal(document.getElementById('interviewerSupervisorModal'));
+            isModal.show();
+        }
+
+        function updateSidebarNames() {
+            if (window.interviewerData && window.supervisorData) {
+                const iName = [window.interviewerData.surname, window.interviewerData.firstname, window.interviewerData.mi, window.interviewerData.suffix].filter(Boolean).join(' ');
+                const sName = [window.supervisorData.surname, window.supervisorData.firstname, window.supervisorData.mi, window.supervisorData.suffix].filter(Boolean).join(' ');
+                $('#sidebarInterviewerName').text(iName);
+                $('#sidebarSupervisorName').text(sName);
+                $('#sidebarInterviewerInfo').show();
+            }
         }
     </script>
     <!-- <script src="census_ui.js"></script> -->

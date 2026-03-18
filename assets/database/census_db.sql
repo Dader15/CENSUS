@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 04, 2026 at 03:41 AM
+-- Generation Time: Mar 12, 2026 at 01:34 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -109,9 +109,18 @@ CREATE TABLE `interview_tbl` (
   `timeended` datetime DEFAULT NULL,
   `result` varchar(322) DEFAULT NULL,
   `dateofnextvisit` datetime DEFAULT NULL,
-  `nameofencoder` varchar(322) DEFAULT NULL,
-  `nameofinterviewer` varchar(322) DEFAULT NULL,
-  `nameofsupervisor` varchar(322) DEFAULT NULL,
+  `nameofencodersname` varchar(322) DEFAULT NULL,
+  `nameofencoderfname` varchar(322) DEFAULT NULL,
+  `nameofencodermiddleinitial` varchar(322) DEFAULT NULL,
+  `nameofencodersuffix` varchar(322) DEFAULT NULL,
+  `nameofsupervisorsname` varchar(322) DEFAULT NULL,
+  `nameofsupervisorfname` varchar(322) DEFAULT NULL,
+  `namenameofsupervisormiddleinitial` varchar(322) DEFAULT NULL,
+  `namenameofsupervisorsuffix` varchar(322) DEFAULT NULL,
+  `nameofinterviewersname` varchar(322) DEFAULT NULL,
+  `nameofinterviewerfname` varchar(322) DEFAULT NULL,
+  `nameofinterviewermiddlename` varchar(322) DEFAULT NULL,
+  `nameofinterviewersuffix` varchar(322) DEFAULT NULL,
   `datencoded` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -144,8 +153,14 @@ CREATE TABLE `master_tbl` (
   `number_code` varchar(322) DEFAULT NULL,
   `household` int(11) DEFAULT NULL,
   `intitutional_living` int(11) DEFAULT NULL,
-  `nameofrespondent` varchar(322) DEFAULT NULL,
-  `household_head` varchar(322) DEFAULT NULL,
+  `nameofrespondentsname` varchar(322) DEFAULT NULL,
+  `nameofrespondentfname` varchar(322) DEFAULT NULL,
+  `nameofrespondentmiddleinitial` varchar(322) DEFAULT NULL,
+  `nameofrespondentsuffix` varchar(322) DEFAULT NULL,
+  `household_headsname` varchar(322) DEFAULT NULL,
+  `household_headfname` varchar(322) DEFAULT NULL,
+  `household_headmiddleinitial` varchar(322) DEFAULT NULL,
+  `household_headsuffix` varchar(322) DEFAULT NULL,
   `totalnohouseholdmembers` varchar(322) DEFAULT NULL,
   `province` varchar(322) DEFAULT NULL,
   `city_municipality` varchar(322) DEFAULT NULL,
@@ -285,7 +300,10 @@ CREATE TABLE `sociocivicparticipation_tbl` (
 
 CREATE TABLE `user_tbl` (
   `id` int(11) NOT NULL,
-  `full_name` varchar(322) DEFAULT NULL,
+  `sname` varchar(322) DEFAULT NULL,
+  `fname` varchar(322) DEFAULT NULL,
+  `middleinitial` varchar(322) DEFAULT NULL,
+  `suffix` varchar(322) DEFAULT NULL,
   `username` varchar(322) DEFAULT NULL,
   `password` varchar(322) DEFAULT NULL,
   `usertype` varchar(322) DEFAULT NULL,
@@ -302,8 +320,10 @@ CREATE TABLE `user_tbl` (
 -- Dumping data for table `user_tbl`
 --
 
-INSERT INTO `user_tbl` (`id`, `full_name`, `username`, `password`, `usertype`, `brgy`, `position`, `delete_status`, `date created`, `changedpassword`, `updatedat`, `session_id`) VALUES
-(1, 'Alexander Ang', 'admin', '$2y$12$vCUWidD64S0UNpwZHLoOaeq7ZczgSn5ecZ8JNf.VZ.TvdbTBJkvem', 'ADMIN', '18', 'Computer Programmer I', 0, '2026-03-04 08:23:01', 1, '2026-03-04 01:42:14', '58487svfrsr9m5nalkvgfkpatj');
+INSERT INTO `user_tbl` (`id`, `sname`, `fname`, `middleinitial`, `suffix`, `username`, `password`, `usertype`, `brgy`, `position`, `delete_status`, `date created`, `changedpassword`, `updatedat`, `session_id`) VALUES
+(1, 'ANG', 'ALEXANDER', 'B', NULL, 'admin', '$2y$12$vCUWidD64S0UNpwZHLoOaeq7ZczgSn5ecZ8JNf.VZ.TvdbTBJkvem', 'SUPERADMIN', '18', 'COMPUTER PROGRAMMER I', 0, '2026-03-04 08:23:01', 1, '2026-03-11 02:52:07', 'kjoni4o8gednb3hbs8g1ap42pf'),
+(2, 'SAMPLE', 'SAMPLE', 'SAMPLE', NULL, 'sample', '$2y$12$0TmIh7gOzLwCuzIaQ7AtQOQC0rmMwCDlrYXYss3RAxHXYmKf7vZEW', 'ADMIN', '18', 'SAMPLE', 0, '2026-03-06 10:19:55', 0, '2026-03-09 11:26:03', NULL),
+(7, 'SAMPLE1', 'SAMPLE1', 'SAMPLE1', NULL, 'sample1', '$2y$10$8DbhfhPfQd25krfuxZT6OOvHWWeO.iIdsZd.nXcxHp/Admth9HESG', 'USER', '16', 'Sample Account1', 0, '2026-03-06 13:46:56', 1, '2026-03-09 04:49:24', NULL);
 
 --
 -- Indexes for dumped tables
@@ -353,7 +373,7 @@ ALTER TABLE `questions_tbl`
 -- AUTO_INCREMENT for table `user_tbl`
 --
 ALTER TABLE `user_tbl`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

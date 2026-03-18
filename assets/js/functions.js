@@ -89,22 +89,17 @@ $(document).ready(function() {
             $('.nav-item').removeClass('active');
             $('.nav-item:has(i.fa-cog)').addClass('active');
 
-            // Rebind menu toggle
-            $(document).on('click', '#menuToggle', function() {
-                $('.sidebar').toggleClass('show');
-            });
-
             // Load and populate users
             loadUsers();
 
-            // Add New User Button
-            $(document).on('click', '#addUserBtn', function() {
+            // Add New User Button (use off/on to prevent stacking)
+            $(document).off('click.addUser').on('click.addUser', '#addUserBtn', function() {
                 resetUserForm();
                 $('#userModalLabel').html('<i class="fas fa-user-plus"></i> Add New User');
                 $('#deleteStatus').val('0').show();
                 $('#username').prop('disabled', false);
                 $('#saveUserBtn').text('Add User');
-                let userModal = new bootstrap.Modal(document.getElementById('userModal'));
+                let userModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('userModal'));
                 userModal.show();
             });
         });
@@ -172,7 +167,7 @@ $(document).ready(function() {
                 <td data-label="Full Name">${escapeHtml(user.full_name)}</td>
                 <td data-label="Username">${escapeHtml(user.username)}</td>
                 <td data-label="Type">${escapeHtml(user.usertype)}</td>
-                <td data-label="Barangay">${escapeHtml(user.brgy || 'N/A')}</td>
+                <td data-label="Barangay">${user.brgy ? 'Barangay ' + escapeHtml(user.brgy) : 'N/A'}</td>
                 <td data-label="Position">${escapeHtml(user.position || 'N/A')}</td>
                 <td data-label="Status">${statusBadge}</td>
                 <td data-label="Created Date">${createdDate}</td>
@@ -182,41 +177,44 @@ $(document).ready(function() {
             tableBody.append(row);
         });
 
-        // Rebind event handlers
+        // Rebind event handlers (namespaced off/on prevents stacking)
         bindUserTableEvents();
     }
 
-    // Bind User Table Events
+    // Bind User Table Events (once, using namespaced events to prevent stacking)
     function bindUserTableEvents() {
+        // Remove any previously bound handlers, then re-bind
+        $(document).off('click.userEvents');
+
         // Edit User
-        $(document).on('click', '.edit-user-btn', function() {
+        $(document).on('click.userEvents', '.edit-user-btn', function() {
             let btn = $(this);
-            let userId = btn.data('id');
+            let userId = btn.attr('data-id');
 
             $('#userId').val(userId);
-            $('#userSname').val(btn.data('sname') || '');
-            $('#userFname').val(btn.data('fname') || '');
-            $('#userMI').val(btn.data('mi') || '');
-            $('#userSuffix').val(btn.data('suffix') || '');
-            $('#username').val(btn.data('username') || '').prop('disabled', false);
-            $('#userType').val(btn.data('usertype') || '');
-            // Handle brgy stored as "Barangay X" or just "X"
-            let brgyVal = String(btn.data('brgy') || '');
+            $('#userSname').val(btn.attr('data-sname') || '');
+            $('#userFname').val(btn.attr('data-fname') || '');
+            $('#userMI').val(btn.attr('data-mi') || '');
+            $('#userSuffix').val(btn.attr('data-suffix') || '');
+            $('#username').val(btn.attr('data-username') || '').prop('disabled', false);
+            $('#userType').val(btn.attr('data-usertype') || '');
+            // Set barangay - use attr() to get raw string value
+            let brgyVal = btn.attr('data-brgy') || '';
             let brgyMatch = brgyVal.match(/\d+/);
-            $('#barangay').val(brgyMatch ? brgyMatch[0] : brgyVal);
-            $('#position').val(btn.data('position') || '');
+            $('#userBarangay').val(brgyMatch ? brgyMatch[0] : brgyVal);
+            $('#position').val(btn.attr('data-position') || '');
             
-            let deleteStatus = btn.data('delete-status') || 0;
+            let deleteStatus = btn.attr('data-delete-status') || '0';
             $('#deleteStatus').val(deleteStatus);
 
             $('#userModalLabel').html('<i class="fas fa-user-edit"></i> Edit User');
             $('#saveUserBtn').text('Update User');
-            let userModal = new bootstrap.Modal(document.getElementById('userModal'));
+            let userModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('userModal'));
             userModal.show();
         });
 
         // Delete User (Soft Delete)
-        $(document).on('click', '.delete-user-btn', function() {
+        $(document).on('click.userEvents', '.delete-user-btn', function() {
             let userId = $(this).data('id');
             let fullName = $(this).closest('tr').find('td:eq(0)').text();
 
@@ -255,7 +253,7 @@ $(document).ready(function() {
         });
 
         // Restore User
-        $(document).on('click', '.restore-user-btn', function() {
+        $(document).on('click.userEvents', '.restore-user-btn', function() {
             let userId = $(this).data('id');
             let fullName = $(this).closest('tr').find('td:eq(0)').text();
 
@@ -294,7 +292,7 @@ $(document).ready(function() {
         });
 
         // Change User Password
-        $(document).on('click', '.change-password-btn', function() {
+        $(document).on('click.userEvents', '.change-password-btn', function() {
             let userId = $(this).data('id');
             let userName = $(this).data('name');
             let username = $(this).data('username');
@@ -307,12 +305,12 @@ $(document).ready(function() {
             $('#confirmManualPassword').val('');
             $('#passwordMismatchError').addClass('d-none');
             
-            let changePasswordModal = new bootstrap.Modal(document.getElementById('changeUserPasswordModal'));
+            let changePasswordModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('changeUserPasswordModal'));
             changePasswordModal.show();
         });
 
         // Generate Password Button
-        $(document).on('click', '#generatePasswordBtn', function() {
+        $(document).on('click.userEvents', '#generatePasswordBtn', function() {
             let userId = $('#changePasswordUserId').val();
             
             $.ajax({
@@ -338,7 +336,7 @@ $(document).ready(function() {
         });
 
         // Copy Generated Password
-        $(document).on('click', '#copyPasswordBtn', function() {
+        $(document).on('click.userEvents', '#copyPasswordBtn', function() {
             let password = $('#generatedPassword').val();
             navigator.clipboard.writeText(password).then(() => {
                 Swal.fire('Copied!', 'Password copied to clipboard', 'success');
@@ -348,7 +346,7 @@ $(document).ready(function() {
         });
 
         // Confirm Generated Password
-        $(document).on('click', '#confirmGeneratedPasswordBtn', function() {
+        $(document).on('click.userEvents', '#confirmGeneratedPasswordBtn', function() {
             let userId = $('#changePasswordUserId').val();
             let password = $('#generatedPassword').val();
             
@@ -404,7 +402,7 @@ $(document).ready(function() {
         let suffix = $('#userSuffix').val().trim();
         let username = $('#username').val().trim();
         let userType = $('#userType').val();
-        let barangay = $('#barangay').val().trim();
+        let barangay = $('#userBarangay').val().trim();
         let position = $('#position').val().trim();
         let deleteStatus = $('#deleteStatus').val() || 0;
 
